@@ -37,34 +37,35 @@ class getInput:
     def getNormal(self, mean, std_dev):
         return
     
-# Solve for dependent outputs based on provided inputs
-class getOutput:
+# [Comment]
+class getOutput1:
     
-    # Organize independent variables from dependent variables being solved for
-    def __init__(self, independ, Path_vals):
-        # Loop through a vector the size of independ assigning the Path_val of
-        ## independent variables to correct x indexes and symbols for 
-        ## dependent variables that are to be solved for.  Call it self.x to
-        ## be used by whatever system is desired.  So x should have characters
-        ## and floats...i.e. multiple data types
+    # Organize inputs into self for the sequential solution
+    def __init__(self,Path_vals):
+        self.Path_vals = Path_vals
         pass
+        
+    # Compute outputs for analysis 1
+    def Analysis1(self):
+        self.Path_vals[2] = self.Path_vals[0] + self.Path_vals[1]
+        return self.Path_vals
     
-    # Solver for first system of equations
-    def getSystem1(self):
-        return
+    # Compute outputs for analysis 2
+    def Analysis2(self):
+        self.Path_vals[4] = self.Path_vals[2] - self.Path_vals[3]**2
+        self.Path_vals[5] = 2*self.Path_vals[1] + self.Path_vals[3]
+        return self.Path_vals
     
-    # Solver for second system of equations
-    def getSystem2(self):
-        return
+    # Compute outputs for analysis 3
+    def Analysis3(self):
+        self.Path_vals[7] = self.Path_vals[4] + math.sqrt(self.Path_vals[5]) - self.Path_vals[6]
+        return self.Path_vals
     
+    # Compute outputs for analysis 4
+    def Analysis4(self):
+        self.Path_vals[9] = self.Path_vals[7] - 2*(self.Path_vals[8] + self.Path_vals[0]**3)
+        return self.Path_vals
     
-# Define nonlinear system of equations
-#def func(x):
-    #return [x[0] + x[1] - x[2],
-            #x[2] - x[3]**2 - x[4],
-            #2*x[1] + x[3] - x[5],
-            #x[4] + math.sqrt(x[5]) - x[6] - x[7],
-            #x[7] - 2*(x[8]+x[0]**3) - x[9]]
 
 
 
@@ -78,14 +79,11 @@ FUNCTIONS
 
 
 
-
-
-
 """
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 10000
+runs = 100
 
 # Assign variable bounds
 bounds = np.array([[1.0, 5.0], # x1
@@ -106,12 +104,10 @@ independ = np.array([[0, 1, 3, 6, 8], # Path1
                      [0, 1, 3, 7, 8]]) # Path4
 
 
-
-
-
 """
 SCRIPT
 """
+
 # Define matrix for path variables
 Path_vals = np.zeros((np.shape(independ)[0],runs,np.shape(bounds)[0]))
 
@@ -126,8 +122,31 @@ for i in range(0,np.shape(Path_vals)[0]):
             index = independ[i,k]
             span = bounds[index,:]
             Path_vals[i,j,index] = random.getUniform(span)
+
+# [Solver - Comment]
+for i in range(0,np.shape(Path_vals)[0]):
+    for j in range(0,runs):
+        
+        # Make class for solver and establish path orders
+        solver = getOutput1(Path_vals[i,j,:])
+        sequence = [[solver.Analysis1, solver.Analysis2, solver.Analysis3, solver.Analysis4], # Path1
+                    [solver.Analysis2, solver.Analysis1, solver.Analysis3, solver.Analysis4], # Path2
+                    [solver.Analysis3, solver.Analysis4, solver.Analysis1, solver.Analysis2], # Path3
+                    [solver.Analysis4, solver.Analysis1, solver.Analysis2, solver.Analysis3]] # Path4
+        
+        for k in range(0,np.shape(sequence)[1]):
+                
+            ## and maybe a while loop for the variable values to match up, with independent
+            Path_vals[i,j,:] = sequence[i][k]()
             
-# Solve for dependent variable values
+            
+            
+        
+        
+        
+        
+# [Checker loop - Comment]
+
 
 
     
