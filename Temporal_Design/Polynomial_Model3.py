@@ -41,30 +41,29 @@ class getInput:
 class getOutput1:
     
     # Organize inputs into self for the sequential solution
-    def __init__(self,Path_vals):
-        self.Path_vals = Path_vals
+    def __init__(self):
         pass
         
     # Compute outputs for analysis 1
-    def Analysis1(self):
-        self.Path_vals[2] = self.Path_vals[0] + self.Path_vals[1]
-        return self.Path_vals
+    def Analysis1(self, Path_vals):
+        Path_vals[2] = Path_vals[0] + Path_vals[1]
+        return Path_vals
     
     # Compute outputs for analysis 2
-    def Analysis2(self):
-        self.Path_vals[4] = self.Path_vals[2] - self.Path_vals[3]**2
-        self.Path_vals[5] = 2*self.Path_vals[1] + self.Path_vals[3]
-        return self.Path_vals
+    def Analysis2(self, Path_vals):
+        Path_vals[4] = Path_vals[2] - Path_vals[3]**2
+        Path_vals[5] = 2*Path_vals[1] + Path_vals[3]
+        return Path_vals
     
     # Compute outputs for analysis 3
-    def Analysis3(self):
-        self.Path_vals[7] = self.Path_vals[4] + math.sqrt(self.Path_vals[5]) - self.Path_vals[6]
-        return self.Path_vals
+    def Analysis3(self, Path_vals):
+        Path_vals[7] = Path_vals[4] + math.sqrt(Path_vals[5]) - Path_vals[6]
+        return Path_vals
     
     # Compute outputs for analysis 4
-    def Analysis4(self):
-        self.Path_vals[9] = self.Path_vals[7] - 2*(self.Path_vals[8] + self.Path_vals[0]**3)
-        return self.Path_vals
+    def Analysis4(self, Path_vals):
+        Path_vals[9] = Path_vals[7] - 2*(Path_vals[8] + Path_vals[0]**3)
+        return Path_vals
     
 
 
@@ -103,6 +102,13 @@ independ = np.array([[0, 1, 3, 6, 8], # Path1
                      [0, 4, 5, 6, 8], # Path3
                      [0, 1, 3, 7, 8]]) # Path4
 
+# Define solver sequences
+solver = getOutput1()
+sequence = [[solver.Analysis1, solver.Analysis2, solver.Analysis3, solver.Analysis4], # Path1
+            [solver.Analysis2, solver.Analysis1, solver.Analysis3, solver.Analysis4], # Path2
+            [solver.Analysis3, solver.Analysis4, solver.Analysis1, solver.Analysis2], # Path3
+            [solver.Analysis4, solver.Analysis1, solver.Analysis2, solver.Analysis3]] # Path4
+
 
 """
 SCRIPT
@@ -125,19 +131,11 @@ for i in range(0,np.shape(Path_vals)[0]):
 
 # [Solver - Comment]
 for i in range(0,np.shape(Path_vals)[0]):
-    for j in range(0,runs):
-        
-        # Make class for solver and establish path orders
-        solver = getOutput1(Path_vals[i,j,:])
-        sequence = [[solver.Analysis1, solver.Analysis2, solver.Analysis3, solver.Analysis4], # Path1
-                    [solver.Analysis2, solver.Analysis1, solver.Analysis3, solver.Analysis4], # Path2
-                    [solver.Analysis3, solver.Analysis4, solver.Analysis1, solver.Analysis2], # Path3
-                    [solver.Analysis4, solver.Analysis1, solver.Analysis2, solver.Analysis3]] # Path4
-        
+    for j in range(0,runs): 
         for k in range(0,np.shape(sequence)[1]):
                 
             ## and maybe a while loop for the variable values to match up, with independent
-            Path_vals[i,j,:] = sequence[i][k]()
+            Path_vals[i,j,:] = sequence[i][k](Path_vals[i,j,:])
             
             
             
