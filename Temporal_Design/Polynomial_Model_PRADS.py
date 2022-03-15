@@ -41,7 +41,7 @@ class evalFuncs:
     # Initialize the class
     def __init__(self, Path_vals):
         self.n = Path_vals
-        return
+        return 
     
     # Return output of analysis 1
     def analysis1(self):
@@ -63,7 +63,6 @@ class evalFuncs:
     def analysis4(self):
         self.n[9] = self.n[7] - 2*(self.n[8] + self.n[0]**3)
         return self.n
-
 
 
 # Check if iterate and calculated value match within a tolerance
@@ -96,7 +95,7 @@ class getIterate:
 """
 FUNCTIONS
 """
-
+    
 
 
 
@@ -127,7 +126,8 @@ bounds = np.array([[1.0, 5.0],   # x1
 # List x-variable indices that will be independent
 independ = np.array([[0, 1, 3, 6, 8],  # Path1
                      [1, 2, 3, 6, 8],  # Path2
-                     [0, 4, 5, 6, 8],  # Path3
+                     [0, 4, 5, 6, 8],  # Path3a
+                     [0, 4, 5, 6, 8],  # Path3b
                      [0, 1, 3, 7, 8]]) # Path4
 
 # Define solver sequences
@@ -186,10 +186,10 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
 for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
     for j in range(0,runs):                      # j loops with runs
         for k in range(0,np.shape(sequence)[1]): # k loops with analyses
-            # Do initial evaluation before entering while loop
-            solver = evalFuncs(Path_vals[i,j,:])
-            Path_vals_new = sequence[i][k]()
             
+            # Create analysis class
+            solver = evalFuncs(Path_vals[i,j,:])
+            Path_vals_new = eval(sequence[i][k] + '()')
         
         #while ():
             
