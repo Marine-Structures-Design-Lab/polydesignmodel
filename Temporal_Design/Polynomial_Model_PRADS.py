@@ -140,7 +140,7 @@ for i in range(np.shape(sequence)[0]):
     for j in range(np.shape(sequence)[1]):
         sequence[i][j] = 'solver.analysis' + str(sequence[i][j])
         
-
+# List iterating variable(s) of each path
 
 
 
@@ -159,19 +159,12 @@ for i in range(0,np.shape(independ)[0]):
             count += 1
 del count
 
-# Define matrix for path variables
+# Set up empty vectors and matrics
 Path_vals = np.zeros((np.shape(independ)[0],runs,np.shape(bounds)[0]))
-
-# Define a vector for path variables that will be used to check inputs
 Path_vals_new = np.zeros(np.shape(Path_vals)[2])
-
-# Define rework counter where column number corresponds to rework loop number
 Rework = np.zeros((np.shape(independ)[0],runs,np.shape(sequence)[1]))
 
-# Define a vector for path variables that will be used to check inputs
-Path_vals_new = np.zeros(np.shape(Path_vals)[2])
-
-# Make class for creating random input
+# Create random input class
 random = getInput()
 
 # Populate Path_vals with uniform RVs for independent variables of each path
@@ -187,11 +180,16 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
     for j in range(0,runs):                      # j loops with runs
         for k in range(0,np.shape(sequence)[1]): # k loops with analyses
             
-            # Create analysis class
+            # Create analysis class and evaluate for new Path values
             solver = evalFuncs(Path_vals[i,j,:])
             Path_vals_new = eval(sequence[i][k] + '()')
-        
-        #while ():
+            
+            # while loop
+            
+            
+            # Replace Path values with new Path values for a run
+            Path_vals[i,j,:] = Path_vals_new
+            
             
 
 
