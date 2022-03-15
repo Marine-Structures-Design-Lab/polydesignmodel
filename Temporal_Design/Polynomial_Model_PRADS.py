@@ -39,31 +39,30 @@ class getInput:
 class evalFuncs:
     
     # Initialize the class
-    def __init__(self, Path_vals, func):
+    def __init__(self, Path_vals):
         self.n = Path_vals
-        self.func = func
         return
     
     # Return output of analysis 1
     def analysis1(self):
         self.n[2] = self.n[1] + self.n[2]
-        return self.n[2]
+        return self.n
     
     # Return output of analysis 2
     def analysis2(self):
         self.n[4] = self.n[2] - self.n[3]**2
         self.n[5] = 2*self.n[1] + self.n[3]
-        return self.n[4], self.n[5]
+        return self.n
     
     # Return output of analysis 3
     def analysis3(self):
         self.n[7] = self.n[4] + self.n[5]**(1/2) - self.n[6]
-        return self.n[7]
+        return self.n
     
     # Return output of analysis 4
     def analysis4(self):
         self.n[9] = self.n[7] - 2*(self.n[8] + self.n[0]**3)
-        return self.n[9]
+        return self.n
 
 
 
@@ -163,6 +162,9 @@ del count
 # Define matrix for path variables
 Path_vals = np.zeros((np.shape(independ)[0],runs,np.shape(bounds)[0]))
 
+# Define a vector for path variables that will be used to check inputs
+Path_vals_new = np.zeros(np.shape(Path_vals)[2])
+
 # Define rework counter where column number corresponds to rework loop number
 Rework = np.zeros((np.shape(independ)[0],runs,np.shape(sequence)[1]))
 
@@ -184,11 +186,12 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
 for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
     for j in range(0,runs):                      # j loops with runs
         for k in range(0,np.shape(sequence)[1]): # k loops with analyses
-            # Do initial evaluations before entering while loop
+            # Do initial evaluation before entering while loop
+            solver = evalFuncs(Path_vals[i,j,:])
+            Path_vals_new = sequence[i][k]()
             
         
-            j
-            #while ():
+        #while ():
             
 
 
