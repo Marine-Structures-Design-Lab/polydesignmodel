@@ -105,11 +105,9 @@ class createFunction:
         
         # Convert set to list
         self.V = list(self.V)
-        print(self.V)
         
         # Make a copy of the analysis equations before any replacement
         expr = self.analysis
-        print(expr)
         
         # Loop through each variable of the equation
         for i in range(0,np.shape(self.V)[0]):
@@ -124,103 +122,27 @@ class createFunction:
                 # Loop through each equation of the analysis
                 for j in range(0,np.shape(self.analysis)[0]):
                     expr[j] = expr[j].subs(self.x[ind],self.Pvn[ind])
-                    print(self.Pvn)
-                    print(expr)
         
         # Return the solvable function containing only one unknown variable
         return expr
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # Evaluate function
 class evalFuncs:
     
     # Initialize the class
-    def __init__(self,Path_vals_new,analysis,depend,Vars,x):
-        self.n = Path_vals_new
-        self.analysis = analysis
-        self.depend = depend
-        self.Vars = Vars
-        self.x = x
-        return 
+    def __init__(self,expr,depend):
+        self.expr = expr
+        self.d = depend
+        return
     
-    # Return output of the desired analysis
+    # Return output of the analysis
     def evalAnalysis(self):
         
-        # Convert set to list
-        self.Vars = list(self.Vars)
-        
-        # Loop through each equation of the analysis
-        for i in range(0,np.shape(self.analysis)[0]):
+        # Solve with sympy
+        sols = sp.solve(self.expr)
             
-            # Loop through variables in an equation
-            for j in range(0,np.shape(self.Vars)[0]):
-                
-                # Retrieve index for x variables in the analysis
-                ind = self.x.index(self.Vars[j])
-                
-                # Create extra equations for independent variable values
-                if (self.x[ind] in self.depend) or (i > 0):
-                    continue
-                else:
-                    self.analysis.append(sp.Eq(self.x[ind]-self.n[ind]))
-        print(self.n)
-            
-        # Solve the nonlinear system of equations
-        print(self.Vars)
-        answers = sp.solve(self.analysis, self.Vars)
-        print(answers)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        # Add dependent x variable solution to vector
-        #for i in range(0,np.shape(answers)[0]):
-            #if (self.Vars[i] in self.depend):
-                #self.n[i] = answers[i]
-        
-        #print(self.n)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        return self.n
+        return sols
 
 
 
@@ -236,7 +158,7 @@ FUNCTIONS
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 1
+runs = 10
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -300,61 +222,36 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         index = sequence[i][0]
         variables = getVariables(analysis[index-1])
         Vars = variables.getVars()
-        #print(Vars)
         
         # Get random values for inputs of first analysis
         random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
         Path_vals_new = random.getUniform()
-        #print(Path_vals_new)
         
         # Create function(s) for first analysis with numerical inputs and variable output(s)
         func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
         expr = func.getFunc()
         
+        # Evaluate first analysis
+        solver = evalFuncs(expr,depend[index-1][:])
+        sols = solver.evalAnalysis()
+        print(sols)
+        
+        # Assign dependent variable(s) to the path values new vector
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        # Evaluate first analysis with fsolve
-        #solver = evalFuncs(Path_vals_new,analysis[index-1][:],depend[index-1][:],Vars,x)
-        #Path_vals_new = solver.evalAnalysis()
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        # Get random numbers for inputs we do not have values for
-        # [if Rework column 4 is 0...uniform input...else normal input]
-        
-        # Solve the equation for dependend variable(s)
-        
+
         
         # Check -- Look for conflicts
+        
+        
+        
+        
+        # L1 Loop if conflict
+        
+        
+        
+        
+        # Assign Path_vals_new vector to Path_vals matrix for the run
         
         
         
