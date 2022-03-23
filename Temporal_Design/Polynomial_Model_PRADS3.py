@@ -109,6 +109,7 @@ class createFunction:
         
         # Make a copy of the analysis equations before any replacement
         expr = self.analysis
+        print(expr)
         
         # Loop through each variable of the equation
         for i in range(0,np.shape(self.V)[0]):
@@ -309,7 +310,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Create function(s) for first analysis with numerical inputs and variable output(s)
         func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
         expr = func.getFunc()
-        print(expr)
+        
         
         
         
