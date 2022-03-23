@@ -107,7 +107,7 @@ class createFunction:
         self.V = list(self.V)
         
         # Make a copy of the analysis equations before any replacement
-        expr = self.analysis
+        expr = np.copy(self.analysis)
         
         # Loop through each variable of the equation
         for i in range(0,np.shape(self.V)[0]):
@@ -126,23 +126,6 @@ class createFunction:
         # Return the solvable function containing only one unknown variable
         return expr
 
-
-# Evaluate function
-class evalFuncs:
-    
-    # Initialize the class
-    def __init__(self,expr,depend):
-        self.expr = expr
-        self.d = depend
-        return
-    
-    # Return output of the analysis
-    def evalAnalysis(self):
-        
-        # Solve with sympy
-        sols = sp.solve(self.expr)
-            
-        return sols
 
 
 
@@ -232,8 +215,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         expr = func.getFunc()
         
         # Evaluate first analysis
-        solver = evalFuncs(expr,depend[index-1][:])
-        sols = solver.evalAnalysis()
+        sols = sp.solve(expr)
         print(sols)
         
         # Assign dependent variable(s) to the path values new vector
