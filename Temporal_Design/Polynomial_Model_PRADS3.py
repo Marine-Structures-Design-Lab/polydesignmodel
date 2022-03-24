@@ -155,7 +155,23 @@ class assignOutput:
         return self.Pvn
 
 
-
+# Determine if there any conflicts with the calculated outputs and inputs
+class checkConflict:
+    
+    # Initialize the class
+    def __init__(self,Path_vals,Path_vals_new):
+        self.Pv = Path_vals
+        self.Pvn = Path_vals_new
+        return
+    
+    # Assess if calculated output value is adequately close to its input value
+    def getCheck(self):
+        
+        # 
+        
+        
+        
+        return True
 
 
 
@@ -279,6 +295,10 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         Path_vals_new = solution.solAssign()
         
         # Check for conflicts
+        print(Path_vals[i,j,:])
+        print(Path_vals_new)
+        check = checkConflict(Path_vals[i,j,:],Path_vals_new)
+        conflict = check.getCheck()
         
         
         
