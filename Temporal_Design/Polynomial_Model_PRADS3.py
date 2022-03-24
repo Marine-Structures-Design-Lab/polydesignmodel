@@ -14,7 +14,6 @@ import numpy as np
 import sympy as sp
 import math
 import matplotlib.pyplot as plt
-from scipy.optimize import fsolve
 
 
 
@@ -127,11 +126,43 @@ class createFunction:
         return expr
 
 
+# Assign the dependent output(s) solved for back to the numerical path vector
+class assignOutput:
+    
+    # Initialize the class
+    def __init__(self,sols,Path_vals_new,x):
+        self.sols = sols
+        self.Pvn = Path_vals_new;
+        self.x = x
+        return
+    
+    # Assign the calculated solution(s) to the path vector
+    def solAssign(self):
+        
+        # Loop through all solutions of the analysis
+        for i in range(0,len(self.sols)):
+        
+            # Retrieve x variable index of the solution
+            ind_var = list(self.sols.keys())[i]
+            
+            # Retrieve numerical index of the x variable index
+            ind_num = self.x.index(ind_var)
+            
+            # Add solution to the proper index in the numerical path vector
+            self.Pvn[ind_num] = self.sols[ind_var]
+        
+        # Return our updated numerical path vector
+        return self.Pvn
 
 
-"""
-FUNCTIONS
-"""
+
+
+
+
+
+
+
+
 
 
 
@@ -141,7 +172,7 @@ FUNCTIONS
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 10
+runs = 2
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -216,10 +247,60 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         
         # Evaluate first analysis
         sols = sp.solve(expr)
-        print(sols)
         
-        # Assign dependent variable(s) to the path values new vector
+        # Assign dependent variables(s) of first analysis to path values vector
+        solution = assignOutput(sols,Path_vals_new,x)
+        Path_vals_new = solution.solAssign()
+        print(Path_vals_new)
         
+        # Retrieve variables involved in the second analysis
+        
+        
+        
+        
+        
+        
+        # Get random values for inputs of second analysis
+        
+        
+        
+        
+        # Create functions(s) for second analysis with numerical inputs and variable output(s)
+        
+        
+        
+        
+        # Evaluate second analysis
+        
+        
+        
+        
+        # Check for conflicts
+        
+        
+        
+        # L1 loop if conflicts
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        # Look for conflicts
+        
+        
+        
+        
+        
+        
+        
+        
+        
+            
         
 
         
