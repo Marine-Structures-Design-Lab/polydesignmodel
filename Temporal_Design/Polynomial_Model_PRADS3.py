@@ -74,7 +74,7 @@ class getInput:
             ind = self.x.index(self.V[i])
             
             # Get uniform random input within bounds if x is not dependent
-            if self.x[ind] in self.d:
+            if (self.x[ind] in self.d):
                 continue
             else:
                 self.Pvn[ind] = np.random.uniform(self.bds[ind,0],self.bds[ind,1])
@@ -172,7 +172,7 @@ class assignOutput:
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 2
+runs = 1
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -251,29 +251,32 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Assign dependent variables(s) of first analysis to path values vector
         solution = assignOutput(sols,Path_vals_new,x)
         Path_vals_new = solution.solAssign()
-        print(Path_vals_new)
+        
+        # Assign new path values vector to official path values vector
+        Path_vals[i,j,:] = Path_vals_new
+        
+        # Reset new path values vector to zeros
+        Path_vals_new = np.zeros(np.shape(Path_vals)[2])
         
         # Retrieve variables involved in the second analysis
-        
-        
-        
-        
-        
+        index = sequence[i][1]
+        variables = getVariables(analysis[index-1])
+        Vars = variables.getVars()
         
         # Get random values for inputs of second analysis
-        
-        
-        
+        random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
+        Path_vals_new = random.getUniform()
         
         # Create functions(s) for second analysis with numerical inputs and variable output(s)
-        
-        
-        
+        func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+        expr = func.getFunc()
         
         # Evaluate second analysis
+        sols = sp.solve(expr)
         
-        
-        
+        # Assign dependent variables(s) of second analysis to path values vector
+        solution = assignOutput(sols,Path_vals_new,x)
+        Path_vals_new = solution.solAssign()
         
         # Check for conflicts
         
