@@ -74,7 +74,11 @@ class getInput:
             ind = self.x.index(self.V[i])
             
             # Get uniform random input within bounds if x is not dependent
+            ### skip assignment if x is dependent var of analysis
             if (self.x[ind] in self.d):
+                continue
+            ### skip assignment if x has already been assigned as input
+            elif (self.Pvn[ind] != 0):
                 continue
             else:
                 self.Pvn[ind] = np.random.uniform(self.bds[ind,0],self.bds[ind,1])
@@ -268,11 +272,8 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         solution = assignOutput(sols,Path_vals_new,x)
         Path_vals_new = solution.solAssign()
         
-        # Assign new path values vector to official path values vector
-        Path_vals[i,j,:] = Path_vals_new
-        
-        # Reset new path values vector to zeros
-        Path_vals_new = np.zeros(np.shape(Path_vals)[2])
+        # Assign a copy of new path values vector to official path values vector
+        Path_vals[i,j,:] = np.copy(Path_vals_new)
         
         # Retrieve variables involved in the second analysis
         index = sequence[i][1]
@@ -282,6 +283,8 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Get random values for inputs of second analysis
         random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
         Path_vals_new = random.getUniform()
+        print(Path_vals[i,j,:])
+        print(Path_vals_new)
         
         # Create functions(s) for second analysis with numerical inputs and variable output(s)
         func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
@@ -293,10 +296,9 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Assign dependent variables(s) of second analysis to path values vector
         solution = assignOutput(sols,Path_vals_new,x)
         Path_vals_new = solution.solAssign()
+        print(Path_vals_new)
         
         # Check for conflicts
-        print(Path_vals[i,j,:])
-        print(Path_vals_new)
         check = checkConflict(Path_vals[i,j,:],Path_vals_new)
         conflict = check.getCheck()
         
