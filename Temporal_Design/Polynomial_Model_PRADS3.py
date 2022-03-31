@@ -183,7 +183,7 @@ class checkConflict:
             # Retrieve x variable index of the dependent variable
             ind = self.x.index(self.d[i])
             
-            # fill checker with the proper boolean value
+            # Fill checker with the proper boolean value
             ### dependent variable not assigned an input
             if (self.Pv[ind] == 0):
                 checker[i] = True
@@ -195,11 +195,26 @@ class checkConflict:
                 checker[i] = False
                 
         return checker
+
+
+# Iterate through lower level loops if there are dependent variable conflicts
+class getLoopy:
+    
+    # Initialize the class
+    def __init__(self):
+        return
+    
+    # See notes on where to get started with this...probably both loops in same function
                 
 
 
 
-
+        #count = 0
+        #while np.all(~conflict):
+            #if (count > 10):
+                #break
+            #print(count)
+            #count = count+1
 
 
 
@@ -324,6 +339,8 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         print(conflict)
         
         # L1 loop if conflicts
+        looper1 = getLoopy(conflict)
+        
         
         
         
