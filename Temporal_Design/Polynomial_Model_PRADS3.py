@@ -163,19 +163,39 @@ class assignOutput:
 class checkConflict:
     
     # Initialize the class
-    def __init__(self,Path_vals,Path_vals_new):
+    def __init__(self,tol,Path_vals,Path_vals_new,depend,x):
+        self.tol = tol
         self.Pv = Path_vals
         self.Pvn = Path_vals_new
+        self.d = depend
+        self.x = x
         return
     
     # Assess if calculated output value is adequately close to its input value
     def getCheck(self):
         
-        # 
+        # Create a list to store the True or False values
+        checker = np.array(self.d,dtype=bool)
         
-        
-        
-        return True
+        # Loop through each solution of the analysis
+        for i in range(0,np.shape(self.d)[0]):
+            
+            # Retrieve x variable index of the dependent variable
+            ind = self.x.index(self.d[i])
+            
+            # fill checker with the proper boolean value
+            ### dependent variable not assigned an input
+            if (self.Pv[ind] == 0):
+                checker[i] = True
+            ### dependent variable assignment and calculation are close
+            elif (math.isclose(self.Pv[ind],self.Pvn[ind],rel_tol=self.tol)):
+                checker[i] = True
+            ### dependent variable assignment and calculation are not close
+            else:
+                checker[i] = False
+                
+        return checker
+                
 
 
 
@@ -223,9 +243,12 @@ bounds = np.array([[1.0, 5.0],   # x1
 
 # Define solver sequences
 sequence = [[1, 2, 3, 4], # Path1
-            [2, 1, 3, 4], # Path2
-            [3, 4, 1, 2], # Path3
+            [2, 1, 3, 4], # Path2 and maybe 2,3,1,4 for comparison?
+            [3, 4, 1, 2], # Path3 and variations?
             [4, 1, 2, 3]] # Path4
+
+# Set tolerance for closeness of variables
+tol = 1e-4
 
 
 
@@ -283,8 +306,6 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Get random values for inputs of second analysis
         random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
         Path_vals_new = random.getUniform()
-        print(Path_vals[i,j,:])
-        print(Path_vals_new)
         
         # Create functions(s) for second analysis with numerical inputs and variable output(s)
         func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
@@ -296,13 +317,11 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Assign dependent variables(s) of second analysis to path values vector
         solution = assignOutput(sols,Path_vals_new,x)
         Path_vals_new = solution.solAssign()
-        print(Path_vals_new)
         
         # Check for conflicts
-        check = checkConflict(Path_vals[i,j,:],Path_vals_new)
+        check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
         conflict = check.getCheck()
-        
-        
+        print(conflict)
         
         # L1 loop if conflicts
         
