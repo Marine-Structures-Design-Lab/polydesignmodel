@@ -193,7 +193,8 @@ class checkConflict:
             ### dependent variable assignment and calculation are not close
             else:
                 checker[i] = False
-                
+        
+        # return our boolean value(s)
         return checker
 
 
@@ -201,20 +202,83 @@ class checkConflict:
 class getLoopy:
     
     # Initialize the class
-    def __init__(self):
+    def __init__(self, Path_vals, Vars, analysis, depend, x):
+        self.Pv = Path_vals
+        self.V = Vars
+        self.analysis = analysis
+        self.d = depend
+        self.x = x
+        return
+
+    # Can come back to this later and choose the last dependent variable if the others don't work before L2 or after L2
+    
+    # 
+    def newtLoop(self):
+        
+        # Convert set to list
+        self.V = list(self.V)
+        
+        # Retrieve index of variable in the analysis not assigned a value yet
+        for i in range(0,np.shape(self.V)[0]):
+            
+            # Retrieve index for x variable in the analysis
+            ind = self.x.index(self.V[i])
+            
+            # Determine if index value is unassigned
+            if self.Pv[ind] == 0:
+                x_iter = self.x[ind]
+                print(x_iter)
+                break
+        
+        
+            
+            
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+            
+            
+        
+        # First isolate values that have not been assigned a value yet
+        
+        
+        
+        # Then isolate any other independent only variables if still need more
+        
+                
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         return
     
-    # See notes on where to get started with this...probably both loops in same function
-                
-
-
-
-        #count = 0
-        #while np.all(~conflict):
-            #if (count > 10):
-                #break
-            #print(count)
-            #count = count+1
+    
+    def fdLoop(self):
+        return
+    
+    
+    
+    
+    
+    
+    
+    
+    ### Have functions for a Newton solver and a finite difference solver
+    
 
 
 
@@ -264,6 +328,9 @@ sequence = [[1, 2, 3, 4], # Path1
 
 # Set tolerance for closeness of variables
 tol = 1e-4
+
+# Set max number of L1 loops
+l1_max = 10
 
 
 
@@ -322,7 +389,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
         Path_vals_new = random.getUniform()
         
-        # Create functions(s) for second analysis with numerical inputs and variable output(s)
+        # Create function(s) for second analysis with numerical inputs and variable output(s)
         func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
         expr = func.getFunc()
         
@@ -338,56 +405,33 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         conflict = check.getCheck()
         print(conflict)
         
-        # L1 loop if conflicts
-        looper1 = getLoopy(conflict)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        # Look for conflicts
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        # L1 loop until conflicts are eliminated
+        count1 = 0
+        while np.any(~conflict):
             
+            # Break loop if conflict not broken in set number of iterations
+            if (count1 >= l1_max):
+                break
+            
+            # Gather new input values with the desired iterator
+            looper1 = getLoopy(Path_vals[i,j,:],Vars,analysis[index-1],depend[index-1][:],x)
+            looper1.newtLoop()
+            
+            # Use function(s) for analysis with numerical inputs and variable output(s)
+            
+            
+            # Revaluate analysis
+            
+            
+            # Assign dependent variable(s) of analysis to path values vector
+            
+            
+            # Check for conflicts
+            
+            
+            # Increase the L1 counter by one
+            print(count1)
+            count1 = count1+1
         
-
         
-        # Check -- Look for conflicts
-        
-        
-        
-        
-        # L1 Loop if conflict
-        
-        
-        
-        
-        # Assign Path_vals_new vector to Path_vals matrix for the run
-        
-        
-        
-        
-        
-        
-        
-        
-        
-
-
-
-
-
 
