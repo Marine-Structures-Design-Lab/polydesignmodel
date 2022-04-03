@@ -13,7 +13,9 @@ LIBRARIES
 import numpy as np
 import sympy as sp
 import math
+from scipy.optimize import minimize
 import matplotlib.pyplot as plt
+
 
 
 
@@ -202,18 +204,17 @@ class checkConflict:
 class getLoopy:
     
     # Initialize the class
-    def __init__(self, Path_vals, Vars, analysis, depend, x):
+    def __init__(self, Path_vals, Path_vals_new, Vars, analysis, depend, x):
         self.Pv = Path_vals
+        self.Pvn = Path_vals_new
         self.V = Vars
         self.analysis = analysis
         self.d = depend
         self.x = x
         return
-
-    # Can come back to this later and choose the last dependent variable if the others don't work before L2 or after L2
     
-    # 
-    def newtLoop(self):
+    # Do a rework loop w/in the analysis to try to get outputs to match inputs
+    def analysisLoop(self):
         
         # Convert set to list
         self.V = list(self.V)
@@ -227,35 +228,90 @@ class getLoopy:
             # Determine if index value is unassigned
             if self.Pv[ind] == 0:
                 x_iter = self.x[ind]
-                print(x_iter)
                 break
-        
-        
             
+        # Check if the indexed value is in the set of variables
+        if x_iter in self.V:
+            check = True
+        else:
+            check = False
             
+        # Initialize L2-norm function
+        l2norm = 0
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        # Create symbolized L2-norm equation
+        for i in range(0,np.shape(self.d)[0]):
             
+            # Retrieve x variable index of the dependent variable
+            ind = self.x.index(self.d[i])
             
+            # Add term to function for dependent variable
+            l2norm = l2norm + (self.analysis[i]/self.x[ind])**2
+            
+        # Add square root to the function
+        l2norm = sp.sqrt(l2norm)
+        print(l2norm)
         
-        # First isolate values that have not been assigned a value yet
+        # Create an L1 copy of the L2 norm expression
+        l2norm_L1 = l2norm
+        print(l2norm_L1)
+        print(self.Pv)
+        print(self.Pvn)
         
-        
-        
-        # Then isolate any other independent only variables if still need more
-        
+        # If indexed value is a function of all equations, optimize that value
+        if (check == True):
+            
+            # Loop through variables in the set
+            for i in range(0,np.shape(self.V)[0]):
                 
+                # Retrieve index for x variables in the analysis
+                ind = self.x.index(self.V[i])
+                
+                # Substitute x variables in unless its the iterating variable
+                if self.V[i] == x_iter:
+                    x0 = [self.Pvn[ind]]
+                    print(x0)
+                    continue
+                else:
+                    l2norm_L1 = l2norm_L1.subs(self.x[ind],self.Pv[ind])
+                print(l2norm_L1)
+                
+                
+                
+                
+                
+                
+            # Attempt to optimize the L2-norm on the L1 rework loop
+            ### Need to put max iterations, full output, tolerance, method in here as well
+            l2norm_L1 = sp.utilities.lambdify(self.x[0],l2norm_L1)
+            ans_L1 = minimize(l2norm_L1,x0,method='BFGS')
+            print(ans_L1)
+            
+            
+            
+            #ans = minimize()
         
         
         
+        
+        
+        
+        
+        
+            
+            
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+            
+            
         
         
         
@@ -266,18 +322,6 @@ class getLoopy:
         
         return
     
-    
-    def fdLoop(self):
-        return
-    
-    
-    
-    
-    
-    
-    
-    
-    ### Have functions for a Newton solver and a finite difference solver
     
 
 
@@ -329,8 +373,11 @@ sequence = [[1, 2, 3, 4], # Path1
 # Set tolerance for closeness of variables
 tol = 1e-4
 
-# Set max number of L1 loops
+# Set max number of analysis (L1) rework loops
 l1_max = 10
+
+# Set max number of large (L4) rework loops
+l4_max = 10
 
 
 
@@ -353,6 +400,8 @@ Rework = np.zeros((np.shape(sequence)[0],runs,np.shape(sequence)[1]))
 # Assign input values, calculate outputs, check for conflicts, resolve
 for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
     for j in range(0,runs):                      # j loops with runs
+        
+        ###################### FIRST ANALYSIS #################################
         
         # Define a zero vector of path variables
         Path_vals_new = np.zeros(np.shape(Path_vals)[2])
@@ -380,6 +429,8 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Assign a copy of new path values vector to official path values vector
         Path_vals[i,j,:] = np.copy(Path_vals_new)
         
+        ######################### SECOND ANALYSIS #############################
+        
         # Retrieve variables involved in the second analysis
         index = sequence[i][1]
         variables = getVariables(analysis[index-1])
@@ -405,17 +456,12 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         conflict = check.getCheck()
         print(conflict)
         
-        # L1 loop until conflicts are eliminated
-        count1 = 0
-        while np.any(~conflict):
-            
-            # Break loop if conflict not broken in set number of iterations
-            if (count1 >= l1_max):
-                break
+        # L1 loop if there are any conflicts
+        if np.any(~conflict):
             
             # Gather new input values with the desired iterator
-            looper1 = getLoopy(Path_vals[i,j,:],Vars,analysis[index-1],depend[index-1][:],x)
-            looper1.newtLoop()
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x)
+            looper1.analysisLoop()
             
             # Use function(s) for analysis with numerical inputs and variable output(s)
             
@@ -430,8 +476,23 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             
             
             # Increase the L1 counter by one
-            print(count1)
-            count1 = count1+1
         
         
+        
+        
+        
+        
+        
+        
+        ############################ THIRD ANALYSIS ###########################
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        ######################### FOURTH ANALYSIS #############################
 
