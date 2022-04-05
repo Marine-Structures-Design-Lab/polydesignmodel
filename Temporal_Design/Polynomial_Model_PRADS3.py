@@ -444,21 +444,11 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             Path_vals_new = solution.solAssign()
             print(Path_vals_new)
             
-            # Assign a copy of new path values vector to official path values vector
-            Path_vals[i,j,:] = np.copy(Path_vals_new)
-            print(Path_vals[i,j,:])
+            # THIS IS WHERE I NEED ANOTHER CONFLICT CHECKER AND TO DO A LARGE REWORK LOOP IF FAILED
             
-            
-            
-            
-            # Check for conflicts
-            
-            
-        
-        
-        
-        
-        
+        # Assign a copy of new path values vector to official path values vector
+        Path_vals[i,j,:] = np.copy(Path_vals_new)
+        print(Path_vals[i,j,:])
         
         
         
