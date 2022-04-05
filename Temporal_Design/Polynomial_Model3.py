@@ -45,26 +45,36 @@ class getOutput1:
         pass
         
     # Compute outputs for analysis 1
-    def Analysis1(self, Path_vals):
-        Path_vals[2] = Path_vals[0] + Path_vals[1]
-        return Path_vals
+    def Analysis1(self, Path_vals, Path_vals_new):
+        outs = np.array([2])
+        ins = np.array([0, 1])
+        Path_vals_new[2] = Path_vals[0] + Path_vals[1]
+        return outs, ins
     
     # Compute outputs for analysis 2
-    def Analysis2(self, Path_vals):
-        Path_vals[4] = Path_vals[2] - Path_vals[3]**2
-        Path_vals[5] = 2*Path_vals[1] + Path_vals[3]
-        return Path_vals
+    def Analysis2(self, Path_vals, Path_vals_new):
+        outs = np.array([4, 5])
+        ins = np.array([1, 2, 3])
+        Path_vals_new[4] = Path_vals[2] - Path_vals[3]**2
+        Path_vals_new[5] = 2*Path_vals[1] + Path_vals[3]
+        return outs, ins
     
     # Compute outputs for analysis 3
-    def Analysis3(self, Path_vals):
-        Path_vals[7] = Path_vals[4] + math.sqrt(Path_vals[5]) - Path_vals[6]
-        return Path_vals
+    def Analysis3(self, Path_vals, Path_vals_new):
+        outs = np.array([7])
+        ins = np.array([4, 5, 6])
+        Path_vals_new[7] = Path_vals[4] + math.sqrt(Path_vals[5]) - Path_vals[6]
+        return outs, ins
     
     # Compute outputs for analysis 4
-    def Analysis4(self, Path_vals):
-        Path_vals[9] = Path_vals[7] - 2*(Path_vals[8] + Path_vals[0]**3)
-        return Path_vals
+    def Analysis4(self, Path_vals, Path_vals_new):
+        outs = np.array([9])
+        ins = np.array([0, 7, 8])
+        Path_vals_new[9] = Path_vals[7] - 2*(Path_vals[8] + Path_vals[0]**3)
+        return outs, ins
     
+
+
 
 
 
@@ -72,7 +82,6 @@ class getOutput1:
 """
 FUNCTIONS
 """
-
 
 
 
@@ -104,10 +113,14 @@ independ = np.array([[0, 1, 3, 6, 8], # Path1
 
 # Define solver sequences
 solver = getOutput1()
-sequence = [[solver.Analysis1, solver.Analysis2, solver.Analysis3, solver.Analysis4], # Path1
-            [solver.Analysis2, solver.Analysis1, solver.Analysis3, solver.Analysis4], # Path2
-            [solver.Analysis3, solver.Analysis4, solver.Analysis1, solver.Analysis2], # Path3
-            [solver.Analysis4, solver.Analysis1, solver.Analysis2, solver.Analysis3]] # Path4
+sequence = [[solver.Analysis1, solver.Analysis2,
+             solver.Analysis3, solver.Analysis4], # Path1
+            [solver.Analysis2, solver.Analysis1,
+             solver.Analysis3, solver.Analysis4], # Path2
+            [solver.Analysis3, solver.Analysis4,
+             solver.Analysis1, solver.Analysis2], # Path3
+            [solver.Analysis4, solver.Analysis1,
+             solver.Analysis2, solver.Analysis3]] # Path4
 
 
 """
@@ -116,6 +129,9 @@ SCRIPT
 
 # Define matrix for path variables
 Path_vals = np.zeros((np.shape(independ)[0],runs,np.shape(bounds)[0]))
+
+# Define a vector for path variables that will be used to check inputs
+Path_vals_new = np.zeros(np.shape(Path_vals)[2])
 
 # Make class for creating random input
 random = getInput()
@@ -129,14 +145,23 @@ for i in range(0,np.shape(Path_vals)[0]):
             span = bounds[index,:]
             Path_vals[i,j,index] = random.getUniform(span)
 
+# Define vectors for independent variable comparison
+temp1 = np.zeros(np.shape(independ)[1])
+temp2 = np.zeros(np.shape(independ)[1])
+
 # [Solver - Comment]
 for i in range(0,np.shape(Path_vals)[0]):
     for j in range(0,runs): 
         for k in range(0,np.shape(sequence)[1]):
                 
             ## and maybe a while loop for the variable values to match up, with independent
-            Path_vals[i,j,:] = sequence[i][k](Path_vals[i,j,:])
+            outs, ins = sequence[i][k](Path_vals[i,j,:],Path_vals_new)
             
+        # Loop through the same run if old and new independ path vals do not match up
+        for k in range(0,np.shape(independ)[1]):
+            temp1[k] = Path_vals[i,j,independ[i,k]]
+            temp2[k] = Path_vals_new[independ[i,k]]
+        
             
             
         
