@@ -204,13 +204,15 @@ class checkConflict:
 class getLoopy:
     
     # Initialize the class
-    def __init__(self, Path_vals, Path_vals_new, Vars, analysis, depend, x):
+    def __init__(self, Path_vals, Path_vals_new, Vars, analysis, depend, x, tol, l1_max):
         self.Pv = Path_vals
         self.Pvn = Path_vals_new
         self.V = Vars
         self.analysis = analysis
         self.d = depend
         self.x = x
+        self.tol = tol
+        self.l1 = l1_max
         return
     
     # Do a rework loop w/in the analysis to try to get outputs to match inputs
@@ -250,13 +252,9 @@ class getLoopy:
             
         # Add square root to the function
         l2norm = sp.sqrt(l2norm)
-        print(l2norm)
         
         # Create an L1 copy of the L2 norm expression
         l2norm_L1 = l2norm
-        print(l2norm_L1)
-        print(self.Pv)
-        print(self.Pvn)
         
         # If indexed value is a function of all equations, optimize that value
         if (check == True):
@@ -270,57 +268,22 @@ class getLoopy:
                 # Substitute x variables in unless its the iterating variable
                 if self.V[i] == x_iter:
                     x0 = [self.Pvn[ind]]
-                    print(x0)
-                    continue
+                    xind = self.x[ind]
                 else:
                     l2norm_L1 = l2norm_L1.subs(self.x[ind],self.Pv[ind])
-                print(l2norm_L1)
-                
-                
-                
-                
-                
                 
             # Attempt to optimize the L2-norm on the L1 rework loop
-            ### Need to put max iterations, full output, tolerance, method in here as well
-            l2norm_L1 = sp.utilities.lambdify(self.x[0],l2norm_L1)
-            ans_L1 = minimize(l2norm_L1,x0,method='BFGS')
+            l2norm_L1 = sp.utilities.lambdify(xind,l2norm_L1)
+            ans_L1 = minimize(l2norm_L1,x0,method='BFGS',tol=self.tol,options={'maxiter':self.l1})
             print(ans_L1)
             
+            # Assign the new x value to the new path values vector
+            self.Pvn[0] = ans_L1.x
             
-            
-            #ans = minimize()
+            # Retrieve the number of L1 loop iterations for the Rework matrix
+            num_iters = ans_L1.nit
         
-        
-        
-        
-        
-        
-        
-        
-            
-            
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-            
-            
-        
-        
-        
-        
-        
-        
-        
-        
-        return
+        return self.Pvn, num_iters
     
     
 
@@ -395,7 +358,8 @@ SCRIPT
 """
 # Set up empty vectors and matrics
 Path_vals = np.zeros((np.shape(sequence)[0],runs,np.shape(bounds)[0]))
-Rework = np.zeros((np.shape(sequence)[0],runs,np.shape(sequence)[1]))
+Rework_L1 = np.zeros((np.shape(sequence)[0],runs,np.shape(sequence)[1]))
+Rework_L4 = np.zeros((np.shape(sequence)[0],runs,1))
 
 # Assign input values, calculate outputs, check for conflicts, resolve
 for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
@@ -422,7 +386,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Evaluate first analysis
         sols = sp.solve(expr)
         
-        # Assign dependent variables(s) of first analysis to path values vector
+        # Assign dependent variables(s) of first analysis to new path values vector
         solution = assignOutput(sols,Path_vals_new,x)
         Path_vals_new = solution.solAssign()
         
@@ -447,7 +411,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Evaluate second analysis
         sols = sp.solve(expr)
         
-        # Assign dependent variables(s) of second analysis to path values vector
+        # Assign dependent variables(s) of second analysis to new path values vector
         solution = assignOutput(sols,Path_vals_new,x)
         Path_vals_new = solution.solAssign()
         
@@ -460,22 +424,36 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         if np.any(~conflict):
             
             # Gather new input values with the desired iterator
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x)
-            looper1.analysisLoop()
+            # Populate L1 Rework loop with the number of iterations
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max)
+            print(Path_vals_new)
+            Path_vals_new, Rework_L1[i,j,1] = looper1.analysisLoop()
+            print(Rework_L1[i,j,:])
+            print(Path_vals_new)
+            print(Path_vals[i,j,:])
             
-            # Use function(s) for analysis with numerical inputs and variable output(s)
+            # Re-create function(s) for second analysis with numerical inputs and variable output(s)
+            func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+            expr = func.getFunc()
+            
+            # Re-evaluate second analysis
+            sols = sp.solve(expr)
+            
+            # Reassign dependent variable(s) of second analysis to new path values vector
+            solution = assignOutput(sols,Path_vals_new,x)
+            Path_vals_new = solution.solAssign()
+            print(Path_vals_new)
+            
+            # Assign a copy of new path values vector to official path values vector
+            Path_vals[i,j,:] = np.copy(Path_vals_new)
+            print(Path_vals[i,j,:])
             
             
-            # Revaluate analysis
-            
-            
-            # Assign dependent variable(s) of analysis to path values vector
             
             
             # Check for conflicts
             
             
-            # Increase the L1 counter by one
         
         
         
