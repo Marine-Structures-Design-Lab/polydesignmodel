@@ -275,7 +275,6 @@ class getLoopy:
             # Attempt to optimize the L2-norm on the L1 rework loop
             l2norm_L1 = sp.utilities.lambdify(xind,l2norm_L1)
             ans_L1 = minimize(l2norm_L1,x0,method='BFGS',tol=self.tol,options={'maxiter':self.l1})
-            print(ans_L1)
             
             # Assign the new x value to the new path values vector
             self.Pvn[0] = ans_L1.x
@@ -298,7 +297,7 @@ class getLoopy:
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 1
+runs = 10
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -365,10 +364,10 @@ Rework_L4 = np.zeros((np.shape(sequence)[0],runs,1))
 for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
     for j in range(0,runs):                      # j loops with runs
         
-        ###################### FIRST ANALYSIS #################################
-        
         # Define a zero vector of path variables
         Path_vals_new = np.zeros(np.shape(Path_vals)[2])
+        
+        ###################### FIRST ANALYSIS #################################
         
         # Retrieve variables involved in first analysis
         index = sequence[i][0]
@@ -392,6 +391,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         
         # Assign a copy of new path values vector to official path values vector
         Path_vals[i,j,:] = np.copy(Path_vals_new)
+        print(Path_vals[i,j,:])
         
         ######################### SECOND ANALYSIS #############################
         
@@ -418,7 +418,6 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Check for conflicts
         check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
         conflict = check.getCheck()
-        print(conflict)
         
         # L1 loop if there are any conflicts
         if np.any(~conflict):
@@ -426,11 +425,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             # Gather new input values with the desired iterator
             # Populate L1 Rework loop with the number of iterations
             looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max)
-            print(Path_vals_new)
-            Path_vals_new, Rework_L1[i,j,1] = looper1.analysisLoop()
-            print(Rework_L1[i,j,:])
-            print(Path_vals_new)
-            print(Path_vals[i,j,:])
+            Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
             
             # Re-create function(s) for second analysis with numerical inputs and variable output(s)
             func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
@@ -442,7 +437,6 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             # Reassign dependent variable(s) of second analysis to new path values vector
             solution = assignOutput(sols,Path_vals_new,x)
             Path_vals_new = solution.solAssign()
-            print(Path_vals_new)
             
             # THIS IS WHERE I NEED ANOTHER CONFLICT CHECKER AND TO DO A LARGE REWORK LOOP IF FAILED
             
@@ -450,17 +444,105 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         Path_vals[i,j,:] = np.copy(Path_vals_new)
         print(Path_vals[i,j,:])
         
-        
-        
         ############################ THIRD ANALYSIS ###########################
         
+        # Retrieve variables involved in the third analysis
+        index = sequence[i][2]
+        variables = getVariables(analysis[index-1])
+        Vars = variables.getVars()
         
+        # Get random values for inputs of third analysis
+        random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
+        Path_vals_new = random.getUniform()
         
+        # Create function(s) for third analysis with numerical inputs and variable output(s)
+        func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+        expr = func.getFunc()
         
+        # Evaluate third analysis
+        sols = sp.solve(expr)
         
+        # Assign dependent variables(s) of third analysis to new path values vector
+        solution = assignOutput(sols,Path_vals_new,x)
+        Path_vals_new = solution.solAssign()
         
+        # Check for conflicts
+        check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
+        conflict = check.getCheck()
         
-        
+        # L1 loop if there are any conflicts
+        if np.any(~conflict):
+            
+            # Gather new input values with the desired iterator
+            # Populate L1 Rework loop with the number of iterations
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max)
+            Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
+            
+            # Re-create function(s) for third analysis with numerical inputs and variable output(s)
+            func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+            expr = func.getFunc()
+            
+            # Re-evaluate third analysis
+            sols = sp.solve(expr)
+            
+            # Reassign dependent variable(s) of third analysis to new path values vector
+            solution = assignOutput(sols,Path_vals_new,x)
+            Path_vals_new = solution.solAssign()
+            
+            # THIS IS WHERE I NEED ANOTHER CONFLICT CHECKER AND TO DO A LARGE REWORK LOOP IF FAILED
+            
+        # Assign a copy of new path values vector to official path values vector
+        Path_vals[i,j,:] = np.copy(Path_vals_new)
+        print(Path_vals[i,j,:])
         
         ######################### FOURTH ANALYSIS #############################
+        
+        # Retrieve variables involved in the fourth analysis
+        index = sequence[i][3]
+        variables = getVariables(analysis[index-1])
+        Vars = variables.getVars()
+        
+        # Get random values for inputs of fourth analysis
+        random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
+        Path_vals_new = random.getUniform()
+        
+        # Create function(s) for fourth analysis with numerical inputs and variable output(s)
+        func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+        expr = func.getFunc()
+        
+        # Evaluate fourth analysis
+        sols = sp.solve(expr)
+        
+        # Assign dependent variables(s) of fourth analysis to new path values vector
+        solution = assignOutput(sols,Path_vals_new,x)
+        Path_vals_new = solution.solAssign()
+        
+        # Check for conflicts
+        check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
+        conflict = check.getCheck()
+        
+        # L1 loop if there are any conflicts
+        if np.any(~conflict):
+            
+            # Gather new input values with the desired iterator
+            # Populate L1 Rework loop with the number of iterations
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max)
+            Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
+            
+            # Re-create function(s) for fourth analysis with numerical inputs and variable output(s)
+            func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+            expr = func.getFunc()
+            
+            # Re-evaluate fourth analysis
+            sols = sp.solve(expr)
+            
+            # Reassign dependent variable(s) of fourth analysis to new path values vector
+            solution = assignOutput(sols,Path_vals_new,x)
+            Path_vals_new = solution.solAssign()
+            
+            # THIS IS WHERE I NEED ANOTHER CONFLICT CHECKER AND TO DO A LARGE REWORK LOOP IF FAILED
+            
+        # Assign a copy of new path values vector to official path values vector
+        Path_vals[i,j,:] = np.copy(Path_vals_new)
+        print(Path_vals[i,j,:])
 
