@@ -262,13 +262,14 @@ class getLoopy:
             # Loop through variables in the set
             for i in range(0,np.shape(self.V)[0]):
                 
-                # Retrieve index for x variables in the analysis
+                # Retrieve index for x variable in the analysis
                 ind = self.x.index(self.V[i])
                 
                 # Substitute x variables in unless its the iterating variable
                 if self.V[i] == x_iter:
                     x0 = [self.Pvn[ind]]
                     xind = self.x[ind]
+                    Pvnind = ind
                 else:
                     l2norm_L1 = l2norm_L1.subs(self.x[ind],self.Pv[ind])
                 
@@ -277,11 +278,19 @@ class getLoopy:
             ans_L1 = minimize(l2norm_L1,x0,method='BFGS',tol=self.tol,options={'maxiter':self.l1})
             
             # Assign the new x value to the new path values vector
-            self.Pvn[0] = ans_L1.x
+            self.Pvn[Pvnind] = ans_L1.x
             
             # Retrieve the number of L1 loop iterations for the Rework matrix
             num_iters = ans_L1.nit
         
+        else:
+            
+            # Set number of L1 iterations equal to 0
+            num_iters = 0
+        
+        # NEED TO MANIPULATE THIS SOMEHOW SO THAT IF THERE ARE MULTIPLE X ITERATES INSTEAD OF JUST ONE
+            
+        # Return new path values vector and number of iterations
         return self.Pvn, num_iters
     
     
@@ -297,7 +306,7 @@ class getLoopy:
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 10
+runs = 1
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
