@@ -15,16 +15,15 @@ later.  The user is able to select the type of minimizer, although BFGS or
 CG methods are recommended.
 
 On the first pass, all inputs are assigned a uniform random variable within
-its accepted bounds.  Once the user is able to solve for all of the variables, large
-rework loops take the most successful runs and reassign the inputs normal
+its accepted bounds.  Once the user is able to solve for all of the variables,
+large rework loops take the most successful runs and reassign the inputs normal
 random variables around those successful runs.  The simulation then runs again
 for these new inputs.
 
 The results focus on gathering the percentage of runs that each variable falls
-within its required bounds, the percentage of runs having an alotted number
-of successful variables, and the total number of small (L1) and large (L4)
-rework loops.  Graphs are produced to display all of these results for each
-path.
+within its required bounds, the percentage of runs having an alotted number of
+successful variables, and the total number of small (L1) and large (L4) rework
+loops.  Graphs are produced to display all of these results for each path.
 """
 
 
