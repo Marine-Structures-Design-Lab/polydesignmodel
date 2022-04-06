@@ -4,8 +4,29 @@ Created on Fri Mar 18 11:36:50 2022
 
 @author: joeyv
 
-[CODE EXPLANATION]
+The goal of this code is to solve a sequential system of analyses for a
+user-selected path.  The user is able to select the number of analyses, the
+variables in the analyses, the equations in the analyses, the bounds on the
+variables, among other things.  One caveat is that each analysis is only able
+to be solved in one direction: inputs to outputs.  So iterations will be
+required for situations where the inputs of one analysis are determined first,
+when all or some of those inputs are also the outputs of an anlysis solved
+later.  The user is able to select the type of minimizer, although BFGS or
+CG methods are recommended.
+
+On the first pass, all inputs are assigned a uniform random variable within
+its accepted bounds.  Once the user is able to solve for all of the variables, large
+rework loops take the most successful runs and reassign the inputs normal
+random variables around those successful runs.  The simulation then runs again
+for these new inputs.
+
+The results focus on gathering the percentage of runs that each variable falls
+within its required bounds, the percentage of runs having an alotted number
+of successful variables, and the total number of small (L1) and large (L4)
+rework loops.  Graphs are produced to display all of these results for each
+path.
 """
+
 
 """
 LIBRARIES
@@ -15,9 +36,6 @@ import sympy as sp
 import math
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
-
-
-
 
 
 """
@@ -204,7 +222,7 @@ class checkConflict:
 class getLoopy:
     
     # Initialize the class
-    def __init__(self, Path_vals, Path_vals_new, Vars, analysis, depend, x, tol, l1_max):
+    def __init__(self, Path_vals, Path_vals_new, Vars, analysis, depend, x, tol, l1_max, mini):
         self.Pv = Path_vals
         self.Pvn = Path_vals_new
         self.V = Vars
@@ -213,6 +231,7 @@ class getLoopy:
         self.x = x
         self.tol = tol
         self.l1 = l1_max
+        self.m = mini
         return
     
     # Do a rework loop w/in the analysis to try to get outputs to match inputs
@@ -275,7 +294,7 @@ class getLoopy:
                 
             # Attempt to optimize the L2-norm on the L1 rework loop
             l2norm_L1 = sp.utilities.lambdify(xind,l2norm_L1)
-            ans_L1 = minimize(l2norm_L1,x0,method='BFGS',tol=self.tol,options={'maxiter':self.l1})
+            ans_L1 = minimize(l2norm_L1,x0,method=self.m,tol=self.tol,options={'maxiter':self.l1})
             
             # Assign the new x value to the new path values vector
             self.Pvn[Pvnind] = ans_L1.x
@@ -287,20 +306,10 @@ class getLoopy:
             
             # Set number of L1 iterations equal to 0
             num_iters = 0
-        
-        # NEED TO MANIPULATE THIS SOMEHOW SO THAT IF THERE ARE MULTIPLE X ITERATES INSTEAD OF JUST ONE
             
         # Return new path values vector and number of iterations
         return self.Pvn, num_iters
     
-    
-
-
-
-
-
-
-
 
 """
 USER INPUTS
@@ -350,15 +359,8 @@ l1_max = 10
 # Set max number of large (L4) rework loops
 l4_max = 10
 
-
-
-
-
-
-
-
-
-
+# Set method for the norm minimizer of the L1 rework loops
+mini = 'BFGS'
 
 
 """
@@ -433,7 +435,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             
             # Gather new input values with the desired iterator
             # Populate L1 Rework loop with the number of iterations
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max)
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max,mini)
             Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
             
             # Re-create function(s) for second analysis with numerical inputs and variable output(s)
@@ -484,7 +486,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             
             # Gather new input values with the desired iterator
             # Populate L1 Rework loop with the number of iterations
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max)
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max,mini)
             Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
             
             # Re-create function(s) for third analysis with numerical inputs and variable output(s)
@@ -535,7 +537,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             
             # Gather new input values with the desired iterator
             # Populate L1 Rework loop with the number of iterations
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max)
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max,mini)
             Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
             
             # Re-create function(s) for fourth analysis with numerical inputs and variable output(s)
