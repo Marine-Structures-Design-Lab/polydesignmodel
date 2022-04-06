@@ -239,7 +239,10 @@ class getLoopy:
         # Convert set to list
         self.V = list(self.V)
         
-        # Retrieve index of variable in the analysis not assigned a value yet
+        # Initialize a list for the iterating x variable(s)
+        x_iter = [];
+        
+        # Retrieve indices of variable in the analysis not assigned a value yet
         for i in range(0,np.shape(self.V)[0]):
             
             # Retrieve index for x variable in the analysis
@@ -247,14 +250,25 @@ class getLoopy:
             
             # Determine if index value is unassigned
             if self.Pv[ind] == 0:
-                x_iter = self.x[ind]
-                break
+                x_list = [self.x[ind]]
+                x_iter = x_iter + x_list
+                
+        # Initialize the check variable as false
+        check = [False]*(np.shape(self.analysis)[0]);
             
-        # Check if the indexed value is in the set of variables
-        if x_iter in self.V:
-            check = True
-        else:
-            check = False
+        # Iterate over all equations of the analysis
+        for i in range(0,np.shape(self.analysis)[0]):
+            
+            # Retrieve variables of the analysis's equation
+            Vars = self.analysis[i].free_symbols
+            
+            # Iterate over all available x-iteration variables
+            for j in range(0,np.shape(x_iter)[0]):
+                
+                # Check if equation has at least one iterating variable
+                if x_iter[j] in Vars:
+                    check[i] = True
+                    break
             
         # Initialize L2-norm function
         l2norm = 0
@@ -274,8 +288,13 @@ class getLoopy:
         # Create an L1 copy of the L2 norm expression
         l2norm_L1 = l2norm
         
-        # If indexed value is a function of all equations, optimize that value
-        if (check == True):
+        # If each equation has at least one iterating variable, perform L1 loop
+        if all(check):
+            
+            # Initialize empty lists for optimization
+            x0 = []
+            xind = []
+            Pvnind = []
             
             # Loop through variables in the set
             for i in range(0,np.shape(self.V)[0]):
@@ -283,20 +302,22 @@ class getLoopy:
                 # Retrieve index for x variable in the analysis
                 ind = self.x.index(self.V[i])
                 
-                # Substitute x variables in unless its the iterating variable
-                if self.V[i] == x_iter:
-                    x0 = [self.Pvn[ind]]
-                    xind = self.x[ind]
-                    Pvnind = ind
+                # Substitute x variables in unless its an iterating variable
+                if self.V[i] in x_iter:
+                    x0 = x0 + [self.Pvn[ind]]
+                    x_list = [self.x[ind]]
+                    xind = xind + x_list
+                    Pvnind = Pvnind + [ind]
                 else:
                     l2norm_L1 = l2norm_L1.subs(self.x[ind],self.Pv[ind])
                 
-            # Attempt to optimize the L2-norm on the L1 rework loop
+            # Optimize the L2-norm on the L1 rework loop
             l2norm_L1 = sp.utilities.lambdify(xind,l2norm_L1)
             ans_L1 = minimize(l2norm_L1,x0,method=self.m,tol=self.tol,options={'maxiter':self.l1})
             
-            # Assign the new x value to the new path values vector
-            self.Pvn[Pvnind] = ans_L1.x
+            # Assign the new x value(s) to the new path values vector
+            for i in range(0,np.shape(Pvnind)[0]):
+                self.Pvn[Pvnind[i]] = ans_L1.x[i]
             
             # Retrieve the number of L1 loop iterations for the Rework matrix
             num_iters = ans_L1.nit
