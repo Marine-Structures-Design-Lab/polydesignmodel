@@ -221,14 +221,13 @@ class checkConflict:
 class getLoopy:
     
     # Initialize the class
-    def __init__(self, Path_vals, Path_vals_new, Vars, analysis, depend, x, tol, l1_max, mini):
+    def __init__(self, Path_vals, Path_vals_new, Vars, analysis, depend, x, l1_max, mini):
         self.Pv = Path_vals
         self.Pvn = Path_vals_new
         self.V = Vars
         self.analysis = analysis
         self.d = depend
         self.x = x
-        self.tol = tol
         self.l1 = l1_max
         self.m = mini
         return
@@ -313,7 +312,8 @@ class getLoopy:
                 
             # Optimize the L2-norm on the L1 rework loop
             l2norm_L1 = sp.utilities.lambdify(xind,l2norm_L1)
-            ans_L1 = minimize(l2norm_L1,x0,method=self.m,tol=self.tol,options={'maxiter':self.l1})
+            ans_L1 = minimize(l2norm_L1,x0,method=self.m,options={'maxiter':self.l1})
+            print(ans_L1)
             
             # Assign the new x value(s) to the new path values vector
             for i in range(0,np.shape(Pvnind)[0]):
@@ -455,7 +455,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             
             # Gather new input values with the desired iterator
             # Populate L1 Rework loop with the number of iterations
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max,mini)
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
             Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
             
             # Re-create function(s) for second analysis with numerical inputs and variable output(s)
@@ -469,11 +469,20 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             solution = assignOutput(sols,Path_vals_new,x)
             Path_vals_new = solution.solAssign()
             
-            # THIS IS WHERE I NEED ANOTHER CONFLICT CHECKER AND TO DO A LARGE REWORK LOOP IF FAILED
-            
-        # Assign a copy of new path values vector to official path values vector
-        Path_vals[i,j,:] = np.copy(Path_vals_new)
-        print(Path_vals[i,j,:])
+            # Re-check for conflicts after the L1 loops
+            check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
+            conflict = check.getCheck()
+        
+        # New conflict if statements having to do with the assignment of variables or restarting
+        # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
+        if np.any(~conflict):
+            # Restart all analyses with new values and increase L4 rework count by 1
+            print("No Dice!")
+        else:
+            # Assign a copy of new path values vector to official path values vector
+            Path_vals[i,j,:] = np.copy(Path_vals_new)
+            print(Path_vals[i,j,:])
+        
         
         ############################ THIRD ANALYSIS ###########################
         
@@ -506,7 +515,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             
             # Gather new input values with the desired iterator
             # Populate L1 Rework loop with the number of iterations
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max,mini)
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
             Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
             
             # Re-create function(s) for third analysis with numerical inputs and variable output(s)
@@ -520,11 +529,19 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             solution = assignOutput(sols,Path_vals_new,x)
             Path_vals_new = solution.solAssign()
             
-            # THIS IS WHERE I NEED ANOTHER CONFLICT CHECKER AND TO DO A LARGE REWORK LOOP IF FAILED
+            # Re-check for conflicts after the L1 loops
+            check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
+            conflict = check.getCheck()
             
-        # Assign a copy of new path values vector to official path values vector
-        Path_vals[i,j,:] = np.copy(Path_vals_new)
-        print(Path_vals[i,j,:])
+        # New conflict if statements having to do with the assignment of variables or restarting
+        # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
+        if np.any(~conflict):
+            # Restart all analyses with new values and increase L4 rework count by 1
+            print("No Dice!")
+        else:
+            # Assign a copy of new path values vector to official path values vector
+            Path_vals[i,j,:] = np.copy(Path_vals_new)
+            print(Path_vals[i,j,:])
         
         ######################### FOURTH ANALYSIS #############################
         
@@ -557,7 +574,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             
             # Gather new input values with the desired iterator
             # Populate L1 Rework loop with the number of iterations
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,tol,l1_max,mini)
+            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
             Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
             
             # Re-create function(s) for fourth analysis with numerical inputs and variable output(s)
@@ -571,9 +588,17 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             solution = assignOutput(sols,Path_vals_new,x)
             Path_vals_new = solution.solAssign()
             
-            # THIS IS WHERE I NEED ANOTHER CONFLICT CHECKER AND TO DO A LARGE REWORK LOOP IF FAILED
+            # Re-check for conflicts after the L1 loops
+            check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
+            conflict = check.getCheck()
             
-        # Assign a copy of new path values vector to official path values vector
-        Path_vals[i,j,:] = np.copy(Path_vals_new)
-        print(Path_vals[i,j,:])
+        # New conflict if statements having to do with the assignment of variables or restarting
+        # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
+        if np.any(~conflict):
+            # Restart all analyses with new values and increase L4 rework count by 1
+            print("No Dice!")
+        else:
+            # Assign a copy of new path values vector to official path values vector
+            Path_vals[i,j,:] = np.copy(Path_vals_new)
+            print(Path_vals[i,j,:])
 
