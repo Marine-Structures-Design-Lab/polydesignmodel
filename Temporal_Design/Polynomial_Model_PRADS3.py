@@ -2,7 +2,7 @@
 """
 Created on Fri Mar 18 11:36:50 2022
 
-@author: joeyv
+@author: Joseph B. Van Houten (joeyvan@umich.edu)
 
 The goal of this code is to solve a sequential system of analyses for a
 user-selected path.  The user is able to select the number of analyses, the
@@ -85,19 +85,19 @@ class getInput:
         # Convert set to list
         self.V = list(self.V)
         
-        # Get uniform RV within bounds of particular x variable
+        # Loop through the x variables of the analysis
         for i in range(0,np.shape(self.V)[0]):
             
-            # Retrieve index for x variables in the analysis
+            # Retrieve index for x variable in the analysis
             ind = self.x.index(self.V[i])
             
-            # Get uniform random input within bounds if x is not dependent
-            ### skip assignment if x is dependent var of analysis
+            # Skip assignment if x is dependent variable of analysis
             if (self.x[ind] in self.d):
                 continue
-            ### skip assignment if x has already been assigned as input
+            # Skip assignment if x has already been assigned as input
             elif (self.Pvn[ind] != 0):
                 continue
+            # Get uniform random input within bounds
             else:
                 self.Pvn[ind] = np.random.uniform(bounds[ind,0],bounds[ind,1])
         
@@ -105,8 +105,29 @@ class getInput:
         return self.Pvn
        
     # Assign a normal random value based on mean and standard deviation
-    def getNormal(self, mean, std_dev):
-        return
+    def getNormal(self, mean, std):
+        
+        # Convert set to list
+        self.V = list(self.V)
+        
+        # Loop through the x variables of the analysis
+        for i in range(0,np.shape(self.V)[0]):
+            
+            # Retrieve index for x variable in the analysis
+            ind = self.x.index(self.V[i])
+            
+            # Skip assignment if x is dependent variable of analysis
+            if (self.x[ind] in self.d):
+                continue
+            # Skip assignment if x has already been assigned as input
+            elif (self.Pvn[ind] != 0):
+                continue
+            # Get normal random input given mean and standard deviation
+            else:
+                self.Pvn[ind] = np.random.normal(mean[ind],std[ind])
+        
+        # Return vector with normal RVs
+        return self.Pvn
     
     # Assign a combination of uniform and normal random variables
     def getHybrid(self, bounds, mean, std_dev):
@@ -331,13 +352,43 @@ class getLoopy:
             
         # Return new path values vector and number of iterations
         return self.Pvn, num_iters
+
+
+"""
+FUNCTIONS
+"""
+def resultChecker(Path, bounds):
     
+    # Set up empty success matrices
+    Var_success = np.zeros((np.shape(Path)[0],np.shape(Path)[2]))
+    Run_success = np.zeros((np.shape(Path)[0],np.shape(Path)[2]+1))
+    
+    # Establish a counting variable
+    count = 0
+    
+    # Gather success results for all of the path values
+    for i in range(0,np.shape(Path)[0]):         # i loops with paths
+        for j in range(0,np.shape(Path)[1]):     # j loops with runs
+            for k in range(0,np.shape(Path)[2]): # k loops with variables
+                if (Path[i,j,k] >= bounds[k,0]) and (Path[i,j,k] < bounds[k,1]):
+                    Var_success[i,k] += 1
+                    count += 1
+            Run_success[i,count] += 1
+            count = 0
+            
+    # Calculate percentages from the results
+    Var_success = np.around(Var_success / np.shape(Path)[1] * 100, 2)
+    Run_success = np.around(Run_success / np.shape(Path)[1] * 100, 2)
+    
+    # Return the result percentages
+    return Var_success, Run_success
+
 
 """
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 1
+runs = 10
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -368,8 +419,8 @@ bounds = np.array([[1.0, 5.0],   # x1
 
 # Define solver sequences
 sequence = [[1, 2, 3, 4], # Path1
-            [2, 1, 3, 4], # Path2 and maybe 2,3,1,4 for comparison?
-            [3, 4, 1, 2], # Path3 and variations?
+            [2, 3, 1, 4], # Path2
+            [3, 4, 1, 2], # Path3
             [4, 1, 2, 3]] # Path4
 
 # Set tolerance for closeness of variables
@@ -379,10 +430,13 @@ tol = 1e-4
 l1_max = 10
 
 # Set max number of large (L4) rework loops
-l4_max = 10
+l4_max = 1
 
 # Set method for the norm minimizer of the L1 rework loops
 mini = 'BFGS'
+
+# Set number of successful variables in a run to sample mean and std
+sample = 10
 
 
 """
@@ -394,82 +448,149 @@ Rework_L1 = np.zeros((np.shape(sequence)[0],runs,np.shape(sequence)[1]))
 Rework_L4 = np.zeros((np.shape(sequence)[0],runs,1))
 
 # Assign input values, calculate outputs, check for conflicts, resolve
-for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
-    for j in range(0,runs):                      # j loops with runs
-    
-        # Define a zero vector of path variables
-        Path_vals_new = np.zeros(np.shape(Path_vals)[2])
+for h in range(0,l4_max):                            # h loops with L4 rework
+    for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
+        for j in range(0,runs):                      # j loops with runs
         
-        # Sequence loop
-        for k in range(0,np.shape(sequence)[1]): # k loops with analyses
-        
-            # Retrieve variables involved in analysis
-            index = sequence[i][k]
-            variables = getVariables(analysis[index-1])
-            Vars = variables.getVars()
-        
-            # Get random values for inputs of analysis
-            random = getInput(Vars,Path_vals_new,depend[index-1][:],x)
-            Path_vals_new = random.getUniform(bounds)
-        
-            # Create function(s) for analysis with numerical inputs and variable output(s)
-            func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
-            expr = func.getFunc()
-        
-            # Evaluate analysis
-            sols = sp.solve(expr)
-        
-            # Assign dependent variables(s) of analysis to new path values vector
-            solution = assignOutput(sols,Path_vals_new,x)
-            Path_vals_new = solution.solAssign()
+            # Define zero vectors for run
+            Path_vals_new = np.zeros(np.shape(Path_vals)[2])
+            mean_vals =  np.zeros(np.shape(Path_vals)[2])
+            std_vals = np.zeros(np.shape(Path_vals)[2])
             
-            # Check for conflicts if not the first analysis in the sequence
-            if k > 0:
-                check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
-                conflict = check.getCheck()
-        
-                # L1 loop if there are any conflicts
-                if np.any(~conflict):
+            # Sequence loop
+            for k in range(0,np.shape(sequence)[1]): # k loops with analyses
             
-                    # Gather new input values with the desired iterator
-                    # Populate L1 Rework loop with the number of iterations
-                    looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
-                    Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
+                # Retrieve variables involved in analysis
+                index = sequence[i][k]
+                variables = getVariables(analysis[index-1])
+                Vars = variables.getVars()
             
-                    # Re-create function(s) for analysis with numerical inputs and variable output(s)
-                    func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
-                    expr = func.getFunc()
+                # Get random values for inputs of analysis - IF STATEMENT HERE!
+                random = getInput(Vars,Path_vals_new,depend[index-1][:],x)
+                Path_vals_new = random.getUniform(bounds)
             
-                    # Re-evaluate analysis
-                    sols = sp.solve(expr)
+                # Create function(s) for analysis with numerical inputs and variable output(s)
+                func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+                expr = func.getFunc()
             
-                    # Re-assign dependent variable(s) of analysis to new path values vector
-                    solution = assignOutput(sols,Path_vals_new,x)
-                    Path_vals_new = solution.solAssign()
+                # Evaluate analysis
+                sols = sp.solve(expr)
             
-                    # Re-check for conflicts after the L1 loops
+                # Assign dependent variables(s) of analysis to new path values vector
+                solution = assignOutput(sols,Path_vals_new,x)
+                Path_vals_new = solution.solAssign()
+                
+                # Check for conflicts if not the first analysis in the sequence
+                if k > 0:
                     check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
                     conflict = check.getCheck()
-        
-                # New conflict if statements having to do with the assignment of variables or restarting
-                # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
-                if np.any(~conflict):
-                    # Restart sequence with new values and increase L4 rework count by 1
-                    print("No Dice!")
+            
+                    # L1 loop if there are any conflicts
+                    if np.any(~conflict):
+                
+                        # Gather new input values with the desired iterator
+                        # Populate L1 Rework loop with the number of iterations
+                        looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
+                        Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
+                
+                        # Re-create function(s) for analysis with numerical inputs and variable output(s)
+                        func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+                        expr = func.getFunc()
+                
+                        # Re-evaluate analysis
+                        sols = sp.solve(expr)
+                
+                        # Re-assign dependent variable(s) of analysis to new path values vector
+                        solution = assignOutput(sols,Path_vals_new,x)
+                        Path_vals_new = solution.solAssign()
+                
+                        # Re-check for conflicts after the L1 loops
+                        check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
+                        conflict = check.getCheck()
+            
+                    # New conflict if statements having to do with the assignment of variables or restarting
+                    # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
+                    if np.any(~conflict):
+                        # Restart sequence with new values and increase L4 rework count by 1
+                        print("No Dice!")
+                    else:
+                        # Assign a copy of new path values vector to official path values vector
+                        Path_vals[i,j,:] = np.copy(Path_vals_new)
+                        print(Path_vals[i,j,:])
+            
+                        
+                # Do not check for conflicts if first analysis in the sequence
                 else:
                     # Assign a copy of new path values vector to official path values vector
                     Path_vals[i,j,:] = np.copy(Path_vals_new)
                     print(Path_vals[i,j,:])
-        
-                    
-            # Do not check for conflicts if first analysis in the sequence
-            else:
-                # Assign a copy of new path values vector to official path values vector
-                Path_vals[i,j,:] = np.copy(Path_vals_new)
-                print(Path_vals[i,j,:])
-            
-            
-        
-        
-        
-            
+    
+    # Calculate variable and run success
+    Var_success, Run_success = resultChecker(Path_vals,bounds)
+    
+    # Calculate means and standard deviations
+    
+    
+    # Graph variable success results
+    fig = plt.figure(figsize=(10, 6))
+    xi = np.arange(np.shape(Var_success)[1])
+    x_data = ['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'x8', 'x9', 'x10']
+    plt.title("Results for each Variable")
+    plt.bar(xi-0.3, Var_success[0,:], color = 'red', width = 0.2)
+    #plt.bar(xi-0.3, Var_success[0,:], color = 'darkgray', width = 0.2)
+    plt.bar(xi-0.1, Var_success[1,:], color = 'green', width = 0.2)
+    #plt.bar(xi-0.1, Var_success[1,:], color = 'gray', width = 0.2)
+    plt.bar(xi+0.1, Var_success[2,:], color = 'blue', width = 0.2)
+    #plt.bar(xi+0.1, Var_success[2,:], color = 'dimgray', width = 0.2)
+    plt.bar(xi+0.3, Var_success[3,:], color = 'brown', width = 0.2)
+    #plt.bar(xi+0.3, Var_success[3,:], color = 'lightgray', width = 0.2)
+    plt.xticks(xi, x_data)
+    plt.xlabel("Polynomial Model Variables")
+    plt.ylabel("Percent within Range")
+    plt.legend(["Path1", "Path2", "Path3", "Path4"], loc='upper right')
+    plt.grid(which='major',axis='y')
+    plt.show()
+    
+    # Graph run success results
+    fig = plt.figure(figsize=(10, 6))
+    xi = np.arange(np.shape(Run_success)[1])
+    x_data = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+    plt.title("Results for each Run")
+    plt.bar(xi-0.3, Run_success[0,:], color = 'red', width = 0.2)
+    #plt.bar(xi-0.3, Run_success[0,:], color = 'darkgray', width = 0.2)
+    plt.bar(xi-0.1, Run_success[1,:], color = 'green', width = 0.2)
+    #plt.bar(xi-0.1, Run_success[1,:], color = 'gray', width = 0.2)
+    plt.bar(xi+0.1, Run_success[2,:], color = 'blue', width = 0.2)
+    #plt.bar(xi+0.1, Run_success[2,:], color = 'dimgray', width = 0.2)
+    plt.bar(xi+0.3, Run_success[3,:], color = 'brown', width = 0.2)
+    #plt.bar(xi+0.3, Run_success[3,:], color = 'lightgray', width = 0.2)
+    plt.xticks(xi, x_data)
+    plt.xlabel("Number of Successful Variables in a Run")
+    plt.ylabel("Percent of Total Runs")
+    plt.legend(["Path1", "Path2", "Path3", "Path4"], loc='upper right')
+    plt.grid(which='major',axis='y')
+    plt.show()
+    
+# Graph L1 rework results
+### Search stacked bar chart in matplot lib for this
+
+# Graph L4 rework results
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
