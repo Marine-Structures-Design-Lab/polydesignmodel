@@ -429,8 +429,11 @@ tol = 1e-4
 # Set max number of analysis (L1) rework loops
 l1_max = 10
 
+# Set max number of restart (L-restart) loops
+lrestart_max = 5
+
 # Set max number of large (L4) rework loops
-l4_max = 1
+l4_max = 2
 
 # Set method for the norm minimizer of the L1 rework loops
 mini = 'BFGS'
@@ -445,7 +448,8 @@ SCRIPT
 # Set up empty vectors and matrics
 Path_vals = np.zeros((np.shape(sequence)[0],runs,np.shape(bounds)[0]))
 Rework_L1 = np.zeros((np.shape(sequence)[0],runs,np.shape(sequence)[1]))
-Rework_L4 = np.zeros((np.shape(sequence)[0],runs,1))
+Rework_lrestart = np.zeros((np.shape(sequence)[0],runs,l4_max))
+Rework_L4 = np.zeros(np.shape(sequence)[0])
 
 # Assign input values, calculate outputs, check for conflicts, resolve
 for h in range(0,l4_max):                            # h loops with L4 rework
@@ -457,11 +461,20 @@ for h in range(0,l4_max):                            # h loops with L4 rework
             mean_vals =  np.zeros(np.shape(Path_vals)[2])
             std_vals = np.zeros(np.shape(Path_vals)[2])
             
-            # Sequence loop
-            for k in range(0,np.shape(sequence)[1]): # k loops with analyses
+            # Establish a sequence loop counter
+            count_seq = 0
             
+            # Loop over each of the analyses
+            while count_seq < np.shape(sequence)[1]:
+                
+                # Check max restart count is not exceeded
+                if Rework_lrestart[i,j,h] > lrestart_max:
+                    print("It simply can't be done...No solution")
+                    Path_vals[i,j,:] = np.NaN
+                    break
+                    
                 # Retrieve variables involved in analysis
-                index = sequence[i][k]
+                index = sequence[i][count_seq]
                 variables = getVariables(analysis[index-1])
                 Vars = variables.getVars()
             
@@ -481,7 +494,7 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                 Path_vals_new = solution.solAssign()
                 
                 # Check for conflicts if not the first analysis in the sequence
-                if k > 0:
+                if count_seq > 0:
                     check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
                     conflict = check.getCheck()
             
@@ -508,28 +521,44 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                         check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
                         conflict = check.getCheck()
             
-                    # New conflict if statements having to do with the assignment of variables or restarting
-                    # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
-                    if np.any(~conflict):
-                        # Restart sequence with new values and increase L4 rework count by 1
-                        print("No Dice!")
+                        # Restart the sequence if any conflicts
+                        if np.any(~conflict):
+                            
+                            print("No Dice!")
+                        
+                            # Increase the L-restart count by 1
+                            Rework_lrestart[i,j,h] += 1
+                            
+                            # Reset the Path values vector to zeros (this will need to be changed to mean and std. dev values for x5 and x6)
+                            Path_vals_new = np.zeros(np.shape(Path_vals)[2])
+                            
+                            # Reset sequence counter to 0
+                            count_seq = 0
+                        
                     else:
                         # Assign a copy of new path values vector to official path values vector
                         Path_vals[i,j,:] = np.copy(Path_vals_new)
-                        print(Path_vals[i,j,:])
-            
                         
+                        # Increase the sequence counter by 1
+                        count_seq += 1
+                        
+            
                 # Do not check for conflicts if first analysis in the sequence
                 else:
                     # Assign a copy of new path values vector to official path values vector
                     Path_vals[i,j,:] = np.copy(Path_vals_new)
-                    print(Path_vals[i,j,:])
+                    
+                    # Increase the sequence counter by 1
+                    count_seq += 1
+        
+        # Calculate means and standard deviations of successful runs...if no runs with 9 or 10 successful variables, need to do something
+        ### Something to break this loop if ALL of the runs are successful before l4_max reached
+    
+        # Increase L4 rework counter by 1
+        Rework_L4[i] += 1
     
     # Calculate variable and run success
     Var_success, Run_success = resultChecker(Path_vals,bounds)
-    
-    # Calculate means and standard deviations
-    
     
     # Graph variable success results
     fig = plt.figure(figsize=(10, 6))
@@ -571,8 +600,11 @@ for h in range(0,l4_max):                            # h loops with L4 rework
     plt.grid(which='major',axis='y')
     plt.show()
     
-# Graph L1 rework results
-### Search stacked bar chart in matplot lib for this
+    # Graph L1 rework results
+    ### Search stacked bar chart in matplot lib for this
+    
+    # Graph L-restart results
+    ### Search stacked bar chart in matplot lib for this
 
 # Graph L4 rework results
 
