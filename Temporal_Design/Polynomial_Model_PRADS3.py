@@ -72,16 +72,15 @@ class getVariables:
 class getInput:
     
     # Initialize the class
-    def __init__(self,Vars,Path_vals_new,bounds,depend,x):
+    def __init__(self,Vars,Path_vals_new,depend,x):
         self.V = Vars
         self.Pvn = Path_vals_new
-        self.bds = bounds
         self.d = depend
         self.x = x
         pass
     
     # Assign a uniform random value to the provided range
-    def getUniform(self):
+    def getUniform(self, bounds):
         
         # Convert set to list
         self.V = list(self.V)
@@ -100,13 +99,17 @@ class getInput:
             elif (self.Pvn[ind] != 0):
                 continue
             else:
-                self.Pvn[ind] = np.random.uniform(self.bds[ind,0],self.bds[ind,1])
+                self.Pvn[ind] = np.random.uniform(bounds[ind,0],bounds[ind,1])
         
         # Return vector with uniform RVs
         return self.Pvn
        
     # Assign a normal random value based on mean and standard deviation
     def getNormal(self, mean, std_dev):
+        return
+    
+    # Assign a combination of uniform and normal random variables
+    def getHybrid(self, bounds, mean, std_dev):
         return
 
 
@@ -313,7 +316,6 @@ class getLoopy:
             # Optimize the L2-norm on the L1 rework loop
             l2norm_L1 = sp.utilities.lambdify(xind,l2norm_L1)
             ans_L1 = minimize(l2norm_L1,x0,method=self.m,options={'maxiter':self.l1})
-            print(ans_L1)
             
             # Assign the new x value(s) to the new path values vector
             for i in range(0,np.shape(Pvnind)[0]):
@@ -394,211 +396,80 @@ Rework_L4 = np.zeros((np.shape(sequence)[0],runs,1))
 # Assign input values, calculate outputs, check for conflicts, resolve
 for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
     for j in range(0,runs):                      # j loops with runs
-        
+    
         # Define a zero vector of path variables
         Path_vals_new = np.zeros(np.shape(Path_vals)[2])
         
-        ###################### FIRST ANALYSIS #################################
+        # Sequence loop
+        for k in range(0,np.shape(sequence)[1]): # k loops with analyses
         
-        # Retrieve variables involved in first analysis
-        index = sequence[i][0]
-        variables = getVariables(analysis[index-1])
-        Vars = variables.getVars()
+            # Retrieve variables involved in analysis
+            index = sequence[i][k]
+            variables = getVariables(analysis[index-1])
+            Vars = variables.getVars()
         
-        # Get random values for inputs of first analysis
-        random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
-        Path_vals_new = random.getUniform()
+            # Get random values for inputs of analysis
+            random = getInput(Vars,Path_vals_new,depend[index-1][:],x)
+            Path_vals_new = random.getUniform(bounds)
         
-        # Create function(s) for first analysis with numerical inputs and variable output(s)
-        func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
-        expr = func.getFunc()
-        
-        # Evaluate first analysis
-        sols = sp.solve(expr)
-        
-        # Assign dependent variables(s) of first analysis to new path values vector
-        solution = assignOutput(sols,Path_vals_new,x)
-        Path_vals_new = solution.solAssign()
-        
-        # Assign a copy of new path values vector to official path values vector
-        Path_vals[i,j,:] = np.copy(Path_vals_new)
-        print(Path_vals[i,j,:])
-        
-        ######################### SECOND ANALYSIS #############################
-        
-        # Retrieve variables involved in the second analysis
-        index = sequence[i][1]
-        variables = getVariables(analysis[index-1])
-        Vars = variables.getVars()
-        
-        # Get random values for inputs of second analysis
-        random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
-        Path_vals_new = random.getUniform()
-        
-        # Create function(s) for second analysis with numerical inputs and variable output(s)
-        func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
-        expr = func.getFunc()
-        
-        # Evaluate second analysis
-        sols = sp.solve(expr)
-        
-        # Assign dependent variables(s) of second analysis to new path values vector
-        solution = assignOutput(sols,Path_vals_new,x)
-        Path_vals_new = solution.solAssign()
-        
-        # Check for conflicts
-        check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
-        conflict = check.getCheck()
-        
-        # L1 loop if there are any conflicts
-        if np.any(~conflict):
-            
-            # Gather new input values with the desired iterator
-            # Populate L1 Rework loop with the number of iterations
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
-            Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
-            
-            # Re-create function(s) for second analysis with numerical inputs and variable output(s)
+            # Create function(s) for analysis with numerical inputs and variable output(s)
             func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
             expr = func.getFunc()
-            
-            # Re-evaluate second analysis
+        
+            # Evaluate analysis
             sols = sp.solve(expr)
-            
-            # Reassign dependent variable(s) of second analysis to new path values vector
+        
+            # Assign dependent variables(s) of analysis to new path values vector
             solution = assignOutput(sols,Path_vals_new,x)
             Path_vals_new = solution.solAssign()
             
-            # Re-check for conflicts after the L1 loops
-            check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
-            conflict = check.getCheck()
+            # Check for conflicts if not the first analysis in the sequence
+            if k > 0:
+                check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
+                conflict = check.getCheck()
         
-        # New conflict if statements having to do with the assignment of variables or restarting
-        # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
-        if np.any(~conflict):
-            # Restart all analyses with new values and increase L4 rework count by 1
-            print("No Dice!")
-        else:
-            # Assign a copy of new path values vector to official path values vector
-            Path_vals[i,j,:] = np.copy(Path_vals_new)
-            print(Path_vals[i,j,:])
-        
-        
-        ############################ THIRD ANALYSIS ###########################
-        
-        # Retrieve variables involved in the third analysis
-        index = sequence[i][2]
-        variables = getVariables(analysis[index-1])
-        Vars = variables.getVars()
-        
-        # Get random values for inputs of third analysis
-        random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
-        Path_vals_new = random.getUniform()
-        
-        # Create function(s) for third analysis with numerical inputs and variable output(s)
-        func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
-        expr = func.getFunc()
-        
-        # Evaluate third analysis
-        sols = sp.solve(expr)
-        
-        # Assign dependent variables(s) of third analysis to new path values vector
-        solution = assignOutput(sols,Path_vals_new,x)
-        Path_vals_new = solution.solAssign()
-        
-        # Check for conflicts
-        check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
-        conflict = check.getCheck()
-        
-        # L1 loop if there are any conflicts
-        if np.any(~conflict):
+                # L1 loop if there are any conflicts
+                if np.any(~conflict):
             
-            # Gather new input values with the desired iterator
-            # Populate L1 Rework loop with the number of iterations
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
-            Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
+                    # Gather new input values with the desired iterator
+                    # Populate L1 Rework loop with the number of iterations
+                    looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
+                    Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
             
-            # Re-create function(s) for third analysis with numerical inputs and variable output(s)
-            func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
-            expr = func.getFunc()
+                    # Re-create function(s) for analysis with numerical inputs and variable output(s)
+                    func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+                    expr = func.getFunc()
             
-            # Re-evaluate third analysis
-            sols = sp.solve(expr)
+                    # Re-evaluate analysis
+                    sols = sp.solve(expr)
             
-            # Reassign dependent variable(s) of third analysis to new path values vector
-            solution = assignOutput(sols,Path_vals_new,x)
-            Path_vals_new = solution.solAssign()
+                    # Re-assign dependent variable(s) of analysis to new path values vector
+                    solution = assignOutput(sols,Path_vals_new,x)
+                    Path_vals_new = solution.solAssign()
             
-            # Re-check for conflicts after the L1 loops
-            check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
-            conflict = check.getCheck()
-            
-        # New conflict if statements having to do with the assignment of variables or restarting
-        # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
-        if np.any(~conflict):
-            # Restart all analyses with new values and increase L4 rework count by 1
-            print("No Dice!")
-        else:
-            # Assign a copy of new path values vector to official path values vector
-            Path_vals[i,j,:] = np.copy(Path_vals_new)
-            print(Path_vals[i,j,:])
+                    # Re-check for conflicts after the L1 loops
+                    check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
+                    conflict = check.getCheck()
         
-        ######################### FOURTH ANALYSIS #############################
+                # New conflict if statements having to do with the assignment of variables or restarting
+                # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
+                if np.any(~conflict):
+                    # Restart sequence with new values and increase L4 rework count by 1
+                    print("No Dice!")
+                else:
+                    # Assign a copy of new path values vector to official path values vector
+                    Path_vals[i,j,:] = np.copy(Path_vals_new)
+                    print(Path_vals[i,j,:])
         
-        # Retrieve variables involved in the fourth analysis
-        index = sequence[i][3]
-        variables = getVariables(analysis[index-1])
-        Vars = variables.getVars()
-        
-        # Get random values for inputs of fourth analysis
-        random = getInput(Vars,Path_vals_new,bounds,depend[index-1][:],x)
-        Path_vals_new = random.getUniform()
-        
-        # Create function(s) for fourth analysis with numerical inputs and variable output(s)
-        func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
-        expr = func.getFunc()
-        
-        # Evaluate fourth analysis
-        sols = sp.solve(expr)
-        
-        # Assign dependent variables(s) of fourth analysis to new path values vector
-        solution = assignOutput(sols,Path_vals_new,x)
-        Path_vals_new = solution.solAssign()
-        
-        # Check for conflicts
-        check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
-        conflict = check.getCheck()
-        
-        # L1 loop if there are any conflicts
-        if np.any(~conflict):
+                    
+            # Do not check for conflicts if first analysis in the sequence
+            else:
+                # Assign a copy of new path values vector to official path values vector
+                Path_vals[i,j,:] = np.copy(Path_vals_new)
+                print(Path_vals[i,j,:])
             
-            # Gather new input values with the desired iterator
-            # Populate L1 Rework loop with the number of iterations
-            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
-            Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
             
-            # Re-create function(s) for fourth analysis with numerical inputs and variable output(s)
-            func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
-            expr = func.getFunc()
+        
+        
+        
             
-            # Re-evaluate fourth analysis
-            sols = sp.solve(expr)
-            
-            # Reassign dependent variable(s) of fourth analysis to new path values vector
-            solution = assignOutput(sols,Path_vals_new,x)
-            Path_vals_new = solution.solAssign()
-            
-            # Re-check for conflicts after the L1 loops
-            check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
-            conflict = check.getCheck()
-            
-        # New conflict if statements having to do with the assignment of variables or restarting
-        # and increasing of the L4 loop checker by 1...and some sort of output of no convergence
-        if np.any(~conflict):
-            # Restart all analyses with new values and increase L4 rework count by 1
-            print("No Dice!")
-        else:
-            # Assign a copy of new path values vector to official path values vector
-            Path_vals[i,j,:] = np.copy(Path_vals_new)
-            print(Path_vals[i,j,:])
-
