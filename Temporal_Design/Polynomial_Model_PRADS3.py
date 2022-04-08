@@ -130,8 +130,35 @@ class getInput:
         return self.Pvn
     
     # Assign a combination of uniform and normal random variables
-    def getHybrid(self, bounds, mean, std_dev):
-        return
+    def getHybrid(self, bounds, mean, h):
+        
+        # Convert set to list
+        self.V = list(self.V)
+        
+        # Loop through the x variables of the analysis
+        for i in range(0,np.shape(self.V)[0]):
+            
+            # Retrieve index for x variable in the analysis
+            ind = self.x.index(self.V[i])
+            
+            # Skip assignment if x is dependent variable of analysis
+            if (self.x[ind] in self.d):
+                continue
+            # Skip assignment if x has already been assigned as input
+            elif (self.Pvn[ind] != 0):
+                continue
+            # Get uniform or normal input
+            else:
+                # Assign uniform RV if we do not have a mean value
+                if (mean[ind] == 0):
+                    self.Pvn[ind] = np.random.uniform(bounds[ind,0],bounds[ind,1])
+                # Assign normal RV with diminishing standard deviation if we do have a mean value
+                else:
+                    std_dev = 0.034*(np.abs(bounds[ind,1]-bounds[ind,0]))/h
+                    self.Pvn[ind] = np.random.normal(mean[ind],std_dev)
+        
+        # Return vector with uniform and normal RVs
+        return self.Pvn
 
 
 # Create an expression to be solved with numerical inputs replacing variable placeholders
@@ -196,7 +223,11 @@ class assignOutput:
             ind_num = self.x.index(ind_var)
             
             # Add solution to the proper index in the numerical path vector
-            self.Pvn[ind_num] = self.sols[ind_var]
+            num = self.sols[ind_var]
+            if sp.im(num) != 0:
+                self.Pvn[ind_num] = np.NaN
+            else:
+                self.Pvn[ind_num] = self.sols[ind_var]
         
         # Return our updated numerical path vector
         return self.Pvn
@@ -388,7 +419,7 @@ def resultChecker(Path, bounds):
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 10
+runs = 1
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -424,16 +455,16 @@ sequence = [[1, 2, 3, 4], # Path1
             [4, 1, 2, 3]] # Path4
 
 # Set tolerance for closeness of variables
-tol = 1e-4
+tol = 1e-1
 
 # Set max number of analysis (L1) rework loops
 l1_max = 10
 
 # Set max number of restart (L-restart) loops
-lrestart_max = 5
+lrestart_max = 1
 
 # Set max number of large (L4) rework loops
-l4_max = 2
+l4_max = 1
 
 # Set method for the norm minimizer of the L1 rework loops
 mini = 'BFGS'
@@ -478,10 +509,18 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                 variables = getVariables(analysis[index-1])
                 Vars = variables.getVars()
             
-                # Get random values for inputs of analysis - IF STATEMENT HERE!
+                # Get random values for inputs of analysis
                 random = getInput(Vars,Path_vals_new,depend[index-1][:],x)
-                Path_vals_new = random.getUniform(bounds)
-            
+                if np.all(mean_vals == 0):
+                    Path_vals_new = random.getUniform(bounds)
+                elif np.all(mean_vals != 0):
+                    Path_vals_new = random.getNormal(mean_vals,std_vals)
+                else:
+                    print("Option3")
+                    Path_vals_new = random.getHybrid(bounds,mean_vals,Rework_lrestart[i,j,h])
+                
+                print("1")
+                print(Path_vals_new)
                 # Create function(s) for analysis with numerical inputs and variable output(s)
                 func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
                 expr = func.getFunc()
@@ -492,6 +531,8 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                 # Assign dependent variables(s) of analysis to new path values vector
                 solution = assignOutput(sols,Path_vals_new,x)
                 Path_vals_new = solution.solAssign()
+                print("2")
+                print(Path_vals_new)
                 
                 # Check for conflicts if not the first analysis in the sequence
                 if count_seq > 0:
@@ -505,6 +546,8 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                         # Populate L1 Rework loop with the number of iterations
                         looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
                         Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
+                        print("3")
+                        print(Path_vals_new)
                 
                         # Re-create function(s) for analysis with numerical inputs and variable output(s)
                         func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
@@ -516,6 +559,8 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                         # Re-assign dependent variable(s) of analysis to new path values vector
                         solution = assignOutput(sols,Path_vals_new,x)
                         Path_vals_new = solution.solAssign()
+                        print("4")
+                        print(Path_vals_new)
                 
                         # Re-check for conflicts after the L1 loops
                         check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
@@ -524,17 +569,32 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                         # Restart the sequence if any conflicts
                         if np.any(~conflict):
                             
-                            print("No Dice!")
+                            # Gather the dependent variable value(s) for the reassignment
+                            for k in range(0,np.shape(depend[index-1])[0]):
+                                
+                                # Assign the variable value(s) to the mean values vector
+                                mean_vals[x.index(depend[index-1][k])] = Path_vals_new[x.index(depend[index-1][k])]
                         
                             # Increase the L-restart count by 1
                             Rework_lrestart[i,j,h] += 1
                             
-                            # Reset the Path values vector to zeros (this will need to be changed to mean and std. dev values for x5 and x6)
+                            # Reset the Path values vector to zeros
                             Path_vals_new = np.zeros(np.shape(Path_vals)[2])
+                            print("5")
+                            print(Path_vals_new)
                             
                             # Reset sequence counter to 0
                             count_seq = 0
+                            
+                        # Assign variable values to Path values if no conflicts
+                        else:
+                            # Assign a copy of new path values vector to official path values vector
+                            Path_vals[i,j,:] = np.copy(Path_vals_new)
                         
+                            # Increase the sequence counter by 1
+                            count_seq += 1
+                            
+                    # Assign variable values to Path values if no conflicts
                     else:
                         # Assign a copy of new path values vector to official path values vector
                         Path_vals[i,j,:] = np.copy(Path_vals_new)
