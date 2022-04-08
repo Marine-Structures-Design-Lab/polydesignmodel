@@ -130,7 +130,7 @@ class getInput:
         return self.Pvn
     
     # Assign a combination of uniform and normal random variables
-    def getHybrid(self, bounds, mean, h):
+    def getHybrid(self, bounds, mean, stdr, h):
         
         # Convert set to list
         self.V = list(self.V)
@@ -154,7 +154,7 @@ class getInput:
                     self.Pvn[ind] = np.random.uniform(bounds[ind,0],bounds[ind,1])
                 # Assign normal RV with diminishing standard deviation if we do have a mean value
                 else:
-                    std_dev = 0.034*(np.abs(bounds[ind,1]-bounds[ind,0]))/h
+                    std_dev = stdr*(np.abs(bounds[ind,1]-bounds[ind,0]))/(0.5**(h-1))
                     self.Pvn[ind] = np.random.normal(mean[ind],std_dev)
         
         # Return vector with uniform and normal RVs
@@ -455,16 +455,19 @@ sequence = [[1, 2, 3, 4], # Path1
             [4, 1, 2, 3]] # Path4
 
 # Set tolerance for closeness of variables
-tol = 1e-1
+tol = 1e-2
+
+# Set initial standard deviation percentage for restart loop variables
+std_restart = 0.1
 
 # Set max number of analysis (L1) rework loops
 l1_max = 10
 
 # Set max number of restart (L-restart) loops
-lrestart_max = 1
+lrestart_max = 10
 
 # Set max number of large (L4) rework loops
-l4_max = 1
+l4_max = 2
 
 # Set method for the norm minimizer of the L1 rework loops
 mini = 'BFGS'
@@ -516,11 +519,8 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                 elif np.all(mean_vals != 0):
                     Path_vals_new = random.getNormal(mean_vals,std_vals)
                 else:
-                    print("Option3")
-                    Path_vals_new = random.getHybrid(bounds,mean_vals,Rework_lrestart[i,j,h])
+                    Path_vals_new = random.getHybrid(bounds,mean_vals,std_restart,Rework_lrestart[i,j,h])
                 
-                print("1")
-                print(Path_vals_new)
                 # Create function(s) for analysis with numerical inputs and variable output(s)
                 func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
                 expr = func.getFunc()
@@ -531,8 +531,6 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                 # Assign dependent variables(s) of analysis to new path values vector
                 solution = assignOutput(sols,Path_vals_new,x)
                 Path_vals_new = solution.solAssign()
-                print("2")
-                print(Path_vals_new)
                 
                 # Check for conflicts if not the first analysis in the sequence
                 if count_seq > 0:
@@ -546,8 +544,6 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                         # Populate L1 Rework loop with the number of iterations
                         looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
                         Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
-                        print("3")
-                        print(Path_vals_new)
                 
                         # Re-create function(s) for analysis with numerical inputs and variable output(s)
                         func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
@@ -559,8 +555,6 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                         # Re-assign dependent variable(s) of analysis to new path values vector
                         solution = assignOutput(sols,Path_vals_new,x)
                         Path_vals_new = solution.solAssign()
-                        print("4")
-                        print(Path_vals_new)
                 
                         # Re-check for conflicts after the L1 loops
                         check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
@@ -580,8 +574,6 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                             
                             # Reset the Path values vector to zeros
                             Path_vals_new = np.zeros(np.shape(Path_vals)[2])
-                            print("5")
-                            print(Path_vals_new)
                             
                             # Reset sequence counter to 0
                             count_seq = 0
