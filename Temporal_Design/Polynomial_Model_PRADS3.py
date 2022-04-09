@@ -105,7 +105,7 @@ class getInput:
         return self.Pvn
        
     # Assign a normal random value based on mean and standard deviation
-    def getNormal(self, mean, std):
+    def getNormal(self, mean, std, bounds, mv, stdr, h):
         
         # Convert set to list
         self.V = list(self.V)
@@ -124,7 +124,11 @@ class getInput:
                 continue
             # Get normal random input given mean and standard deviation
             else:
-                self.Pvn[ind] = np.random.normal(mean[ind],std[ind])
+                if mv[ind] == 0:
+                    self.Pvn[ind] = np.random.normal(mean[ind],std[ind])
+                else:
+                    std_dev = stdr*(np.abs(bounds[ind,1]-bounds[ind,0]))/(0.5**(h-1))
+                    self.Pvn[ind] = np.random.normal(mean[ind],std_dev)
         
         # Return vector with normal RVs
         return self.Pvn
@@ -376,6 +380,7 @@ class getLoopy:
             # Retrieve the number of L1 loop iterations for the Rework matrix
             num_iters = ans_L1.nit
         
+        # Do not perform L1 loop if not sufficient amount of iterating variables in equations
         else:
             
             # Set number of L1 iterations equal to 0
@@ -383,6 +388,55 @@ class getLoopy:
             
         # Return new path values vector and number of iterations
         return self.Pvn, num_iters
+
+
+# Calculate variable means and standard deviations of successful runs of all paths
+class getAverages:
+    
+    # Initialize the class
+    def __init__(self, sample, Path_vals, Run_index, mean_vals_all, std_vals_all):
+        self.sample = sample
+        self.Pv = Path_vals
+        self.Ri = Run_index
+        self.mva = mean_vals_all
+        self.sva = std_vals_all
+        return
+    
+    # Calculate variable means and standard deviations of successful runs
+    def getStats(self):
+        
+        # Establish a counter for calculating averages and standard deviations
+        count = 0
+        
+        # Loop through the necessary indices of each path
+        for i in range(0,len(self.Ri)):
+            for j in range(self.sample,len(self.Ri[i])):
+                for k in range(0,len(self.Ri[i][j])):
+                        
+                    # Sum the values of the successful variable runs
+                    self.mva[i,:] += self.Pv[i,self.Ri[i][j][k],:]
+                    count += 1
+                    
+            # Divide the sums by the number of samples for the averages
+            if count > 0:
+                self.mva[i,:] = self.mva[i,:]/count
+            
+            # Loop back through necessary indices of each path
+            for j in range(self.sample,len(self.Ri[i])):
+                for k in range(0,len(self.Ri[i][j])):
+                    
+                    # Sum the square of the differences of the values with the averages
+                    self.sva[i,:] += ((self.Pv[i,self.Ri[i][j][k],:]-self.mva[i,:])**2)
+            
+            # Divide the sums by the number of samples and take square root for standard deviations
+            if count > 0:
+                self.sva[i,:] = np.sqrt(self.sva[i,:]/count)
+            
+            # Reset the counter to zero
+            count = 0
+        
+        # Return the mean values ands standard deviations for variables of each path
+        return self.mva, self.sva
 
 
 """
@@ -393,6 +447,12 @@ def resultChecker(Path, bounds):
     # Set up empty success matrices
     Var_success = np.zeros((np.shape(Path)[0],np.shape(Path)[2]))
     Run_success = np.zeros((np.shape(Path)[0],np.shape(Path)[2]+1))
+    
+    # Set up empty matrix for gathering index groupings of success runs
+    Run_index = [[]]*(np.shape(Path)[2]+1)
+    Run_index2 = [[]]*np.shape(Path)[0]
+    for i in range(0,np.shape(Path)[0]):
+        Run_index2[i] = Run_index.copy()
     
     # Establish a counting variable
     count = 0
@@ -405,6 +465,7 @@ def resultChecker(Path, bounds):
                     Var_success[i,k] += 1
                     count += 1
             Run_success[i,count] += 1
+            Run_index2[i][count] = Run_index2.copy()[i][count] + [j]
             count = 0
             
     # Calculate percentages from the results
@@ -412,14 +473,14 @@ def resultChecker(Path, bounds):
     Run_success = np.around(Run_success / np.shape(Path)[1] * 100, 2)
     
     # Return the result percentages
-    return Var_success, Run_success
+    return Var_success, Run_success, Run_index2
 
 
 """
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 1
+runs = 20
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -455,9 +516,9 @@ sequence = [[1, 2, 3, 4], # Path1
             [4, 1, 2, 3]] # Path4
 
 # Set tolerance for closeness of variables
-tol = 1e-2
+tol = 1e-1
 
-# Set initial standard deviation percentage for restart loop variables
+# Set initial standard deviation percentage (of the range on the bounds) for restart loop variables
 std_restart = 0.1
 
 # Set max number of analysis (L1) rework loops
@@ -467,13 +528,13 @@ l1_max = 10
 lrestart_max = 10
 
 # Set max number of large (L4) rework loops
-l4_max = 2
+l4_max = 3
 
 # Set method for the norm minimizer of the L1 rework loops
 mini = 'BFGS'
 
 # Set number of successful variables in a run to sample mean and std
-sample = 10
+sample = 9
 
 
 """
@@ -484,6 +545,8 @@ Path_vals = np.zeros((np.shape(sequence)[0],runs,np.shape(bounds)[0]))
 Rework_L1 = np.zeros((np.shape(sequence)[0],runs,np.shape(sequence)[1]))
 Rework_lrestart = np.zeros((np.shape(sequence)[0],runs,l4_max))
 Rework_L4 = np.zeros(np.shape(sequence)[0])
+mean_vals_all = np.zeros((np.shape(sequence)[0],l4_max,np.shape(bounds)[0]))
+std_vals_all = np.zeros((np.shape(sequence)[0],l4_max,np.shape(bounds)[0]))
 
 # Assign input values, calculate outputs, check for conflicts, resolve
 for h in range(0,l4_max):                            # h loops with L4 rework
@@ -493,7 +556,6 @@ for h in range(0,l4_max):                            # h loops with L4 rework
             # Define zero vectors for run
             Path_vals_new = np.zeros(np.shape(Path_vals)[2])
             mean_vals =  np.zeros(np.shape(Path_vals)[2])
-            std_vals = np.zeros(np.shape(Path_vals)[2])
             
             # Establish a sequence loop counter
             count_seq = 0
@@ -514,12 +576,13 @@ for h in range(0,l4_max):                            # h loops with L4 rework
             
                 # Get random values for inputs of analysis
                 random = getInput(Vars,Path_vals_new,depend[index-1][:],x)
-                if np.all(mean_vals == 0):
-                    Path_vals_new = random.getUniform(bounds)
-                elif np.all(mean_vals != 0):
-                    Path_vals_new = random.getNormal(mean_vals,std_vals)
+                if (h < 1) or (np.all(mean_vals_all[i,h-1,:]) == 0):
+                    if np.all(mean_vals == 0):
+                        Path_vals_new = random.getUniform(bounds)
+                    else:
+                        Path_vals_new = random.getHybrid(bounds,mean_vals,std_restart,Rework_lrestart[i,j,h])
                 else:
-                    Path_vals_new = random.getHybrid(bounds,mean_vals,std_restart,Rework_lrestart[i,j,h])
+                    Path_vals_new = random.getNormal(mean_vals_all[i,h-1,:],std_vals_all[i,h-1,:],bounds,mean_vals,std_restart,Rework_lrestart[i,j,h])
                 
                 # Create function(s) for analysis with numerical inputs and variable output(s)
                 func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
@@ -593,8 +656,7 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                         
                         # Increase the sequence counter by 1
                         count_seq += 1
-                        
-            
+                                
                 # Do not check for conflicts if first analysis in the sequence
                 else:
                     # Assign a copy of new path values vector to official path values vector
@@ -602,15 +664,18 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                     
                     # Increase the sequence counter by 1
                     count_seq += 1
-        
-        # Calculate means and standard deviations of successful runs...if no runs with 9 or 10 successful variables, need to do something
-        ### Something to break this loop if ALL of the runs are successful before l4_max reached
     
         # Increase L4 rework counter by 1
         Rework_L4[i] += 1
     
     # Calculate variable and run success
-    Var_success, Run_success = resultChecker(Path_vals,bounds)
+    Var_success, Run_success, Run_index = resultChecker(Path_vals,bounds)
+    
+    # Calculate means and standard deviations of successful runs
+    averages = getAverages(sample, Path_vals, Run_index, mean_vals_all[:,h,:], std_vals_all[:,h,:])
+    mean_vals_all[:,h,:], std_vals_all[:,h,:] = averages.getStats()
+    
+    #### - Something to break this loop if ALL of the runs are successful before l4_max reached
     
     # Graph variable success results
     fig = plt.figure(figsize=(10, 6))
