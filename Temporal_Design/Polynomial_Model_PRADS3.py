@@ -574,7 +574,6 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                 
                 # Check max restart count is not exceeded
                 if Rework_lrestart[i,j,h] > lrestart_max:
-                    print("It simply can't be done...No solution")
                     Path_vals[i,j,:] = np.NaN
                     break
                     
@@ -684,6 +683,8 @@ for h in range(0,l4_max):                            # h loops with L4 rework
     averages = getAverages(sample, Path_vals, Run_index, mean_vals_all[:,h,:], std_vals_all[:,h,:])
     mean_vals_all[:,h,:], std_vals_all[:,h,:] = averages.getStats()
     
+    ########################## GRAPH-RELATED CODE #############################
+    
     # Graph variable success results
     fig = plt.figure(figsize=(10, 6))
     xi = np.arange(np.shape(Var_success)[1])
@@ -725,12 +726,56 @@ for h in range(0,l4_max):                            # h loops with L4 rework
     plt.show()
     
     # Graph L1 rework results
-    ### Search stacked bar chart in matplot lib for this
+    if h == 0:
+        yi = np.zeros((np.shape(Rework_L1)[0],l4_max))
+    for i in range(0,np.shape(Rework_L1)[0]):
+        yscratch = np.sum(Rework_L1[i,:,:],axis=1)
+        yi[i,h] = np.average(yscratch)
+fig, ax = plt.subplots(figsize=(10,6))
+xi = ['1', '2', '3', '4']
+for i in range(0,l4_max):
+    if i == 0:
+        ax.bar(xi,yi[:,i],width=0.4,bottom=0,label='Large Loop '+str(i+1))
+    elif np.any(yi[:,i]) != 0:
+        ax.bar(xi,yi[:,i],width=0.4,bottom=yi[:,i-1],label='Large Loop '+str(i+1))
+ax.set_title("Analysis Loops")
+ax.set_xlabel("Path")
+ax.set_ylabel("Average Number of Analysis Loops")
+ax.legend()
+plt.grid(which='major',axis='y')
+plt.show()
     
-    # Graph L-restart results
-    ### Search stacked bar chart in matplot lib for this
+# Graph L-restart results
+fig, ax = plt.subplots(figsize=(10, 6))
+xi = ['1', '2', '3', '4']
+yi = np.zeros(np.shape(Rework_lrestart)[0])
+ysums = np.zeros(np.shape(Rework_lrestart)[0])
+for i in range(0,np.shape(Rework_lrestart)[2]):
+    for j in range(0,np.shape(Rework_lrestart)[0]):
+        yi[j] = np.average(Rework_lrestart[j,:,i])
+    ax.bar(xi,yi,width=0.4,bottom=ysums,label='Large Loop '+str(i+1))
+    ysums = ysums + yi
+ax.set_title("Restart Loops")
+ax.set_xlabel("Path")
+ax.set_ylabel("Average Number of Sequence Restarts")
+ax.legend()
+plt.grid(which='major',axis='y')
+plt.show()
+
 
 # Graph L4 rework results
+fig = plt.figure(figsize=(10, 6))
+xi = ['1', '2', '3', '4']
+plt.title("Large Rework Loops")
+plt.bar(xi, Rework_L4, color = 'red', width = 0.4)
+#plt.bar(xi, Rework_L4, color = 'darkgray', width = 0.4)
+plt.yticks(np.arange(0, l4_max+1, step=1))
+plt.xlabel("Path")
+plt.ylabel("Number of Large Rework Loops")
+plt.grid(which='major',axis='y')
+plt.show()
+
+
 
 
 
