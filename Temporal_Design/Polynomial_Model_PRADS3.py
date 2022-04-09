@@ -24,6 +24,9 @@ The results focus on gathering the percentage of runs that each variable falls
 within its required bounds, the percentage of runs having an alotted number of
 successful variables, and the total number of small (L1) and large (L4) rework
 loops.  Graphs are produced to display all of these results for each path.
+
+User requirements: Should only need to make changes to the 'USER INPUTS' 
+section and the graph-related code at the end of the 'SCRIPT' section.
 """
 
 
