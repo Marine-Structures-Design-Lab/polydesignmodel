@@ -547,12 +547,18 @@ Rework_lrestart = np.zeros((np.shape(sequence)[0],runs,l4_max))
 Rework_L4 = np.zeros(np.shape(sequence)[0])
 mean_vals_all = np.zeros((np.shape(sequence)[0],l4_max,np.shape(bounds)[0]))
 std_vals_all = np.zeros((np.shape(sequence)[0],l4_max,np.shape(bounds)[0]))
+Run_success = np.zeros((np.shape(sequence)[0],np.shape(bounds)[0]+1))
 
 # Assign input values, calculate outputs, check for conflicts, resolve
 for h in range(0,l4_max):                            # h loops with L4 rework
     for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
+    
+        # Do not loop through path if all runs are 100% successful
+        if (Run_success[i,np.shape(bounds)[0]] >= 100):
+            continue
+    
         for j in range(0,runs):                      # j loops with runs
-        
+            
             # Define zero vectors for run
             Path_vals_new = np.zeros(np.shape(Path_vals)[2])
             mean_vals =  np.zeros(np.shape(Path_vals)[2])
@@ -674,8 +680,6 @@ for h in range(0,l4_max):                            # h loops with L4 rework
     # Calculate means and standard deviations of successful runs
     averages = getAverages(sample, Path_vals, Run_index, mean_vals_all[:,h,:], std_vals_all[:,h,:])
     mean_vals_all[:,h,:], std_vals_all[:,h,:] = averages.getStats()
-    
-    #### - Something to break this loop if ALL of the runs are successful before l4_max reached
     
     # Graph variable success results
     fig = plt.figure(figsize=(10, 6))
