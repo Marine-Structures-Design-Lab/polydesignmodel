@@ -483,7 +483,7 @@ def resultChecker(Path, bounds):
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 20
+runs = 10000
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -528,10 +528,10 @@ std_restart = 0.1
 l1_max = 10
 
 # Set max number of restart (L-restart) loops
-lrestart_max = 10
+lrestart_max = 5
 
 # Set max number of large (L4) rework loops
-l4_max = 3
+l4_max = 11
 
 # Set method for the norm minimizer of the L1 rework loops
 mini = 'BFGS'
@@ -553,7 +553,7 @@ std_vals_all = np.zeros((np.shape(sequence)[0],l4_max,np.shape(bounds)[0]))
 Run_success = np.zeros((np.shape(sequence)[0],np.shape(bounds)[0]+1))
 
 # Assign input values, calculate outputs, check for conflicts, resolve
-for h in range(0,l4_max):                            # h loops with L4 rework
+for h in range(0,l4_max):                          # h loops with L4 rework
     for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
     
         # Do not loop through path if all runs are 100% successful
@@ -728,16 +728,20 @@ for h in range(0,l4_max):                            # h loops with L4 rework
     # Graph L1 rework results
     if h == 0:
         yi = np.zeros((np.shape(Rework_L1)[0],l4_max))
+        ysums = np.zeros((np.shape(Rework_L1)[0],l4_max))
     for i in range(0,np.shape(Rework_L1)[0]):
         yscratch = np.sum(Rework_L1[i,:,:],axis=1)
         yi[i,h] = np.average(yscratch)
+        if h > 0:
+            ysums[i,h] = ysums[i,h-1] + yi[i,h-1]
 fig, ax = plt.subplots(figsize=(10,6))
 xi = ['1', '2', '3', '4']
 for i in range(0,l4_max):
     if i == 0:
-        ax.bar(xi,yi[:,i],width=0.4,bottom=0,label='Large Loop '+str(i+1))
+        ax.bar(xi,yi[:,i],width=0.4,bottom=0,label='Large Loop '+str(i))
     elif np.any(yi[:,i]) != 0:
-        ax.bar(xi,yi[:,i],width=0.4,bottom=yi[:,i-1],label='Large Loop '+str(i+1))
+        ax.bar(xi,yi[:,i],width=0.4,bottom=ysums[:,i],label='Large Loop '+str(i))
+    
 ax.set_title("Analysis Loops")
 ax.set_xlabel("Path")
 ax.set_ylabel("Average Number of Analysis Loops")
@@ -753,7 +757,7 @@ ysums = np.zeros(np.shape(Rework_lrestart)[0])
 for i in range(0,np.shape(Rework_lrestart)[2]):
     for j in range(0,np.shape(Rework_lrestart)[0]):
         yi[j] = np.average(Rework_lrestart[j,:,i])
-    ax.bar(xi,yi,width=0.4,bottom=ysums,label='Large Loop '+str(i+1))
+    ax.bar(xi,yi,width=0.4,bottom=ysums,label='Large Loop '+str(i))
     ysums = ysums + yi
 ax.set_title("Restart Loops")
 ax.set_xlabel("Path")
@@ -767,9 +771,9 @@ plt.show()
 fig = plt.figure(figsize=(10, 6))
 xi = ['1', '2', '3', '4']
 plt.title("Large Rework Loops")
-plt.bar(xi, Rework_L4, color = 'red', width = 0.4)
+plt.bar(xi, Rework_L4-1, color = 'red', width = 0.4)
 #plt.bar(xi, Rework_L4, color = 'darkgray', width = 0.4)
-plt.yticks(np.arange(0, l4_max+1, step=1))
+plt.yticks(np.arange(0, l4_max, step=1))
 plt.xlabel("Path")
 plt.ylabel("Number of Large Rework Loops")
 plt.grid(which='major',axis='y')
