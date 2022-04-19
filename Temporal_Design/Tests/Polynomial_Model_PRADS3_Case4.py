@@ -489,10 +489,10 @@ runs = 10000
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
 
 # List out all of the equations
-analysis = [[x[0] + x[1] - x[2]],                              # Analysis 1
-            [x[2] - x[3]**3 - x[4], 2*x[1] + 0.5*x[3] - x[5]], # Analysis 2
-            [x[4] + sp.sqrt(x[5]) - x[6] - x[7]],              # Analysis 3
-            [x[7] - 2*(x[8]+x[0]**3) - x[9]]];                 # Analysis 4
+analysis = [[x[0] - 0.5*x[1] - x[2]],                              # Analysis 1
+            [2*x[2] - x[3]**2 - x[4], 3*x[1] + 0.5*x[3] - x[5]],   # Analysis 2
+            [x[4] + 3*sp.sqrt(x[5]) - 2*x[6] - x[7]],              # Analysis 3
+            [-2*x[7] + (x[8]**2-x[0]**3) - x[9]]];                 # Analysis 4
 
 # List out the variables being solved for in each analysis
 depend = [[x[2]],       # Analysis 1
