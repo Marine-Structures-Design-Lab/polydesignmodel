@@ -269,7 +269,7 @@ class checkConflict:
             if (self.Pv[ind] == 0):
                 checker[i] = True
             ### dependent variable assignment and calculation are close
-            elif (math.isclose(self.Pv[ind],self.Pvn[ind],rel_tol=self.tol)):
+            elif (math.isclose(self.Pvn[ind],self.Pv[ind],rel_tol=self.tol)):
                 checker[i] = True
             ### dependent variable assignment and calculation are not close
             else:
@@ -519,7 +519,7 @@ sequence = [[1, 2, 3, 4], # Path1
             [4, 1, 2, 3]] # Path4
 
 # Set tolerance for closeness of variables
-tol = 1e-1
+tol = 5e-2
 
 # Set initial standard deviation percentage (of the range on the bounds) for restart loop variables
 std_restart = 0.1
@@ -700,7 +700,7 @@ for h in range(0,l4_max):                          # h loops with L4 rework
     #plt.bar(xi+0.3, Var_success[3,:], color = 'lightgray', width = 0.2)
     plt.xticks(xi, x_data)
     plt.xlabel("Polynomial Model Variables")
-    plt.ylabel("Percent within Range")
+    plt.ylabel("Percent of Runs within Bounds")
     plt.legend(["Path1", "Path2", "Path3", "Path4"], loc='upper right')
     plt.grid(which='major',axis='y')
     plt.show()
@@ -720,7 +720,7 @@ for h in range(0,l4_max):                          # h loops with L4 rework
     #plt.bar(xi+0.3, Run_success[3,:], color = 'lightgray', width = 0.2)
     plt.xticks(xi, x_data)
     plt.xlabel("Number of Successful Variables in a Run")
-    plt.ylabel("Percent of Total Runs")
+    plt.ylabel("Percent of Runs")
     plt.legend(["Path1", "Path2", "Path3", "Path4"], loc='upper right')
     plt.grid(which='major',axis='y')
     plt.show()
@@ -761,7 +761,7 @@ for i in range(0,np.shape(Rework_lrestart)[2]):
     ysums2 = ysums2 + yi2
 ax.set_title("Restart Loops")
 ax.set_xlabel("Path")
-ax.set_ylabel("Average Number of Sequence Restarts")
+ax.set_ylabel("Average Number of Restart Loops")
 ax.legend()
 plt.grid(which='major',axis='y')
 plt.show()
@@ -770,12 +770,12 @@ plt.show()
 # Graph L4 rework results
 fig = plt.figure(figsize=(10, 6))
 xi3 = ['1', '2', '3', '4']
-plt.title("Large Rework Loops")
+plt.title("Knowledge Loops")
 plt.bar(xi3, Rework_L4-1, color = 'red', width = 0.4)
 #plt.bar(xi3, Rework_L4, color = 'darkgray', width = 0.4)
 plt.yticks(np.arange(0, l4_max, step=1))
 plt.xlabel("Path")
-plt.ylabel("Number of Large Rework Loops")
+plt.ylabel("Number of Knowledge Loops")
 plt.grid(which='major',axis='y')
 plt.show()
 
