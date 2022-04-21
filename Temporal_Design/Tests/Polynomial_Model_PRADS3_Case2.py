@@ -615,9 +615,8 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                     if np.any(~conflict):
                         
                         # Go straight to restart if any of the new Path values vector is NaN
-                        if np.any(np.isnan(Path_vals_new)):
-                            continue
-                        else:
+                        if np.any(~np.isnan(Path_vals_new)):
+
                             # Gather new input values with the desired iterator
                             # Populate L1 Rework loop with the number of iterations
                             looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
