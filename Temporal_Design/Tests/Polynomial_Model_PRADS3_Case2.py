@@ -738,7 +738,7 @@ fig, ax = plt.subplots(figsize=(10,6))
 xi = ['1', '2', '3', '4']
 for i in range(0,l4_max):
     if i == 0:
-        ax.bar(xi,yi[:,i],width=0.4,bottom=0,label='Large Loop '+str(i))
+        ax.bar(xi,yi[:,i],width=0.4,bottom=0,label='Knowledge Loop '+str(i))
     elif np.any(yi[:,i]) != 0:
         ax.bar(xi,yi[:,i],width=0.4,bottom=ysums[:,i],label='Large Loop '+str(i))
     

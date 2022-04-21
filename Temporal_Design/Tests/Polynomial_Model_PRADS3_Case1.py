@@ -757,7 +757,7 @@ ysums2 = np.zeros(np.shape(Rework_lrestart)[0])
 for i in range(0,np.shape(Rework_lrestart)[2]):
     for j in range(0,np.shape(Rework_lrestart)[0]):
         yi2[j] = np.average(Rework_lrestart[j,:,i])
-    ax.bar(xi2,yi2,width=0.4,bottom=ysums2,label='Large Loop '+str(i))
+    ax.bar(xi2,yi2,width=0.4,bottom=ysums2,label='Knowledge Loop '+str(i))
     ysums2 = ysums2 + yi2
 ax.set_title("Restart Loops")
 ax.set_xlabel("Path")
