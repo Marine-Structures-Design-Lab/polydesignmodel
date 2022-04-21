@@ -127,7 +127,7 @@ class getInput:
                 continue
             # Get normal random input given mean and standard deviation
             else:
-                if mv[ind] == 0:
+                if (mv[ind] == 0) or (np.any(np.isnan(mv))):
                     self.Pvn[ind] = np.random.normal(mean[ind],std[ind])
                 else:
                     std_dev = stdr*(np.abs(bounds[ind,1]-bounds[ind,0]))/(0.5**(h-1))
@@ -157,7 +157,7 @@ class getInput:
             # Get uniform or normal input
             else:
                 # Assign uniform RV if we do not have a mean value
-                if (mean[ind] == 0):
+                if (mean[ind] == 0) or (np.any(np.isnan(mean))):
                     self.Pvn[ind] = np.random.uniform(bounds[ind,0],bounds[ind,1])
                 # Assign normal RV with diminishing standard deviation if we do have a mean value
                 else:
@@ -269,7 +269,7 @@ class checkConflict:
             if (self.Pv[ind] == 0):
                 checker[i] = True
             ### dependent variable assignment and calculation are close
-            elif (math.isclose(self.Pv[ind],self.Pvn[ind],rel_tol=self.tol)):
+            elif (math.isclose(self.Pvn[ind],self.Pv[ind],rel_tol=self.tol)):
                 checker[i] = True
             ### dependent variable assignment and calculation are not close
             else:
@@ -519,7 +519,7 @@ sequence = [[1, 2, 3, 4], # Path1
             [4, 1, 2, 3]] # Path4
 
 # Set tolerance for closeness of variables
-tol = 1e-1
+tol = 5e-2
 
 # Set initial standard deviation percentage (of the range on the bounds) for restart loop variables
 std_restart = 0.1
@@ -544,8 +544,6 @@ sample = 9
 SCRIPT
 """
 # Set up empty vectors and matrics
-Path_vals = np.zeros((np.shape(sequence)[0],runs,np.shape(bounds)[0]))
-Rework_L1 = np.zeros((np.shape(sequence)[0],runs,np.shape(sequence)[1]))
 Rework_lrestart = np.zeros((np.shape(sequence)[0],runs,l4_max))
 Rework_L4 = np.zeros(np.shape(sequence)[0])
 mean_vals_all = np.zeros((np.shape(sequence)[0],l4_max,np.shape(bounds)[0]))
@@ -553,7 +551,12 @@ std_vals_all = np.zeros((np.shape(sequence)[0],l4_max,np.shape(bounds)[0]))
 Run_success = np.zeros((np.shape(sequence)[0],np.shape(bounds)[0]+1))
 
 # Assign input values, calculate outputs, check for conflicts, resolve
-for h in range(0,l4_max):                          # h loops with L4 rework
+for h in range(0,l4_max):                            # h loops with L4 rework
+
+    # Set up empty matrices
+    Path_vals = np.zeros((np.shape(sequence)[0],runs,np.shape(bounds)[0]))
+    Rework_L1 = np.zeros((np.shape(sequence)[0],runs,np.shape(sequence)[1]))
+    
     for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
     
         # Do not loop through path if all runs are 100% successful
@@ -610,26 +613,30 @@ for h in range(0,l4_max):                          # h loops with L4 rework
             
                     # L1 loop if there are any conflicts
                     if np.any(~conflict):
-                
-                        # Gather new input values with the desired iterator
-                        # Populate L1 Rework loop with the number of iterations
-                        looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
-                        Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
-                
-                        # Re-create function(s) for analysis with numerical inputs and variable output(s)
-                        func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
-                        expr = func.getFunc()
-                
-                        # Re-evaluate analysis
-                        sols = sp.solve(expr)
-                
-                        # Re-assign dependent variable(s) of analysis to new path values vector
-                        solution = assignOutput(sols,Path_vals_new,x)
-                        Path_vals_new = solution.solAssign()
-                
-                        # Re-check for conflicts after the L1 loops
-                        check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
-                        conflict = check.getCheck()
+                        
+                        # Go straight to restart if any of the new Path values vector is NaN
+                        if np.any(np.isnan(Path_vals_new)):
+                            continue
+                        else:
+                            # Gather new input values with the desired iterator
+                            # Populate L1 Rework loop with the number of iterations
+                            looper1 = getLoopy(Path_vals[i,j,:],Path_vals_new,Vars,analysis[index-1],depend[index-1][:],x,l1_max,mini)
+                            Path_vals_new, Rework_L1[i,j,index-1] = looper1.analysisLoop()
+                    
+                            # Re-create function(s) for analysis with numerical inputs and variable output(s)
+                            func = createFunction(analysis[index-1],Path_vals_new,Vars,depend[index-1][:],x)
+                            expr = func.getFunc()
+                    
+                            # Re-evaluate analysis
+                            sols = sp.solve(expr)
+                    
+                            # Re-assign dependent variable(s) of analysis to new path values vector
+                            solution = assignOutput(sols,Path_vals_new,x)
+                            Path_vals_new = solution.solAssign()
+                    
+                            # Re-check for conflicts after the L1 loops
+                            check = checkConflict(tol,Path_vals[i,j,:],Path_vals_new,depend[index-1][:],x)
+                            conflict = check.getCheck()
             
                         # Restart the sequence if any conflicts
                         if np.any(~conflict):
@@ -700,7 +707,7 @@ for h in range(0,l4_max):                          # h loops with L4 rework
     #plt.bar(xi+0.3, Var_success[3,:], color = 'lightgray', width = 0.2)
     plt.xticks(xi, x_data)
     plt.xlabel("Polynomial Model Variables")
-    plt.ylabel("Percent within Range")
+    plt.ylabel("Percent of Runs within Bounds")
     plt.legend(["Path1", "Path2", "Path3", "Path4"], loc='upper right')
     plt.grid(which='major',axis='y')
     plt.show()
@@ -720,7 +727,7 @@ for h in range(0,l4_max):                          # h loops with L4 rework
     #plt.bar(xi+0.3, Run_success[3,:], color = 'lightgray', width = 0.2)
     plt.xticks(xi, x_data)
     plt.xlabel("Number of Successful Variables in a Run")
-    plt.ylabel("Percent of Total Runs")
+    plt.ylabel("Percent of Runs")
     plt.legend(["Path1", "Path2", "Path3", "Path4"], loc='upper right')
     plt.grid(which='major',axis='y')
     plt.show()
@@ -738,7 +745,7 @@ fig, ax = plt.subplots(figsize=(10,6))
 xi = ['1', '2', '3', '4']
 for i in range(0,l4_max):
     if i == 0:
-        ax.bar(xi,yi[:,i],width=0.4,bottom=0,label='Large Loop '+str(i))
+        ax.bar(xi,yi[:,i],width=0.4,bottom=0,label='Knowledge Loop '+str(i))
     elif np.any(yi[:,i]) != 0:
         ax.bar(xi,yi[:,i],width=0.4,bottom=ysums[:,i],label='Large Loop '+str(i))
     
@@ -761,7 +768,7 @@ for i in range(0,np.shape(Rework_lrestart)[2]):
     ysums2 = ysums2 + yi2
 ax.set_title("Restart Loops")
 ax.set_xlabel("Path")
-ax.set_ylabel("Average Number of Sequence Restarts")
+ax.set_ylabel("Average Number of Restart Loops")
 ax.legend()
 plt.grid(which='major',axis='y')
 plt.show()
@@ -770,12 +777,12 @@ plt.show()
 # Graph L4 rework results
 fig = plt.figure(figsize=(10, 6))
 xi3 = ['1', '2', '3', '4']
-plt.title("Large Rework Loops")
+plt.title("Knowledge Loops")
 plt.bar(xi3, Rework_L4-1, color = 'red', width = 0.4)
 #plt.bar(xi3, Rework_L4, color = 'darkgray', width = 0.4)
 plt.yticks(np.arange(0, l4_max, step=1))
 plt.xlabel("Path")
-plt.ylabel("Number of Large Rework Loops")
+plt.ylabel("Number of Knowledge Loops")
 plt.grid(which='major',axis='y')
 plt.show()
 
