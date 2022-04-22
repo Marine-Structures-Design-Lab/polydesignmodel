@@ -483,7 +483,7 @@ def resultChecker(Path, bounds):
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 10000
+runs = 10
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -615,7 +615,7 @@ for h in range(0,l4_max):                            # h loops with L4 rework
                     if np.any(~conflict):
                         
                         # Go straight to restart if any of the new Path values vector is NaN
-                        if np.any(~np.isnan(Path_vals_new)):
+                        if np.all(~np.isnan(Path_vals_new)):
 
                             # Gather new input values with the desired iterator
                             # Populate L1 Rework loop with the number of iterations
