@@ -483,7 +483,7 @@ def resultChecker(Path, bounds):
 USER INPUTS
 """
 # Assign number of runs for each path
-runs = 10
+runs = 10000
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
