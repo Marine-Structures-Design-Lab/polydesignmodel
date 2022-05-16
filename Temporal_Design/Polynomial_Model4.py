@@ -393,6 +393,50 @@ class getAverages:
 """
 FUNCTIONS
 """
+# Check success of analyses during simulation
+def analysisChecker(Path,Vars,bounds,IV,IV_ind,i,j,k,x):
+    
+    # Convert set to list
+    Vars = list(Vars)
+    
+    # Establish boolean variable(s) for analysis
+    checker = np.array(Vars,dtype=bool)
+    
+    # Check dependent variable(s) success results for the analysis
+    for m in range(0,np.shape(Vars)[0]):
+        
+        # Retrieve index of the variable
+        ind = x.index(Vars[m])
+        
+        # Check that variable value falls within bounds
+        if (Path[ind] >= bounds[ind,0]) and (Path[ind] < bounds[ind,1]):
+            checker[m] = True
+        else:
+            checker[m] = False
+            
+    # Gather dependent variable(s) success results for the analysis
+    if np.all(checker):
+        IV[i,k] += 1
+        IV_ind[i][k] = IV_ind[i][k].copy() + [j]
+    
+    # Return all success information
+    return IV, IV_ind
+
+
+# Calculate the independent variable result percentages at path end
+def analysisPercent(IV,IV_ind,IV_per,runs):
+    
+    # Calculate percentage from the results
+    for j in range(0,np.shape(IV)[0]):
+        if j == 0:
+            IV_per[j] = np.around(IV[j] / runs * 100, 2)
+        elif IV[j-1] != 0:
+            IV_per[j] = np.around(IV[j] / len(IV_ind[j-1]) * 100, 2)
+    
+    # Return the independent variable percentages
+    return IV_per
+
+
 # Check success of runs during simulation
 def solChecker(Path,bounds,Var,Run,Run_ind,j):
     
@@ -411,7 +455,7 @@ def solChecker(Path,bounds,Var,Run,Run_ind,j):
     return Var, Run, Run_ind
     
 
-# Calculate the result percentages at path runs end
+# Calculate the run result percentages at path end
 def resultPercent(Var,Run):
             
     # Calculate percentages from the results
@@ -426,7 +470,7 @@ def resultPercent(Var,Run):
 USER INPUTS
 """
 # Assign maximum number of runs for each path
-runs = 10
+runs = 10000
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -479,14 +523,11 @@ mini = 'BFGS'
 # Set number of successful variables in a run to sample mean and std
 sample = 10
 
-# Number of sample number success runs for adequate amount of success data
-run_sample = 30
-
 
 """
 SCRIPT
 """
-# Set up empty lists,vectors, and matrics
+# Set up empty lists, vectors, and matrics
 Rework_lrestart = np.zeros((np.shape(sequence)[0],runs))
 Run_success = np.zeros((np.shape(sequence)[0],np.shape(bounds)[0]+1))
 Path_vals = np.zeros((np.shape(sequence)[0],runs,np.shape(bounds)[0]))
@@ -501,17 +542,15 @@ Run_index2 = [[]]*(np.shape(bounds)[0]+1)
 Run_index = [[]]*np.shape(sequence)[0]
 for i in range(0,np.shape(sequence)[0]):
     Run_index[i] = Run_index2.copy()
+IV_success = np.zeros((np.shape(sequence)[0],np.shape(sequence)[1]))
+IV_percent = np.zeros((np.shape(sequence)[0],np.shape(sequence)[1]))
+IV_index2 = [[]]*np.shape(sequence)[1]
+IV_index = [[]]*np.shape(sequence)[0]
+for i in range(0,np.shape(sequence)[0]):
+    IV_index[i] = IV_index2.copy()
 
 for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
     for j in range(0,runs):                      # j loops with runs
-    
-        # Break runs loop if number of sample success runs is exceeded
-        list_size = 0
-        for k in range(sample,len(Run_index[i])):
-            list_size += len(Run_index[i][k])
-        print(list_size)
-        if (list_size >= run_sample):
-            break
         
         # Define zero vectors for run
         Path_vals_new = np.zeros(np.shape(Path_vals)[2])
@@ -527,7 +566,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
             if Rework_lrestart[i,j] > lrestart_max:
                 
                 # Assign all run values NaN
-                Path_vals[i,j,:] = np.NaN
+                #Path_vals[i,j,:] = np.NaN
                 
                 # Reduce restart count by 1
                 Rework_lrestart[i,j] -= 1
@@ -609,24 +648,45 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
                         
                     # Assign variable values to Path values if no conflicts
                     else:
+                        
                         # Assign a copy of new path values vector to official path values vector
                         Path_vals[i,j,:] = np.copy(Path_vals_new)
-                    
+                        
+                        # Calculate successful runs up to analysis in sequence that produce an acceptable output
+                        if count_seq == 0:
+                            IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
+                        elif IV_index[i][count_seq-1]:
+                            IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
+                        
                         # Increase the sequence counter by 1
                         count_seq += 1
                         
                 # Assign variable values to Path values if no conflicts
                 else:
+                    
                     # Assign a copy of new path values vector to official path values vector
                     Path_vals[i,j,:] = np.copy(Path_vals_new)
                     
+                    # Calculate successful runs up to analysis in sequence that produce an acceptable output
+                    if count_seq == 0:
+                        IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
+                    elif IV_index[i][count_seq-1]:
+                        IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
+                        
                     # Increase the sequence counter by 1
                     count_seq += 1
                             
             # Do not check for conflicts if first analysis in the sequence
             else:
+                
                 # Assign a copy of new path values vector to official path values vector
                 Path_vals[i,j,:] = np.copy(Path_vals_new)
+                
+                # Calculate successful runs up to analysis in sequence that produce an acceptable output
+                if count_seq == 0:
+                    IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
+                elif IV_index[i][count_seq-1]:
+                    IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
                 
                 # Increase the sequence counter by 1
                 count_seq += 1
@@ -634,7 +694,10 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
         # Check variable and run success
         Var_success[i,:], Run_success[i,:], Run_index[i] = solChecker(Path_vals[i,j,:],bounds,Var_success[i,:], Run_success[i,:], Run_index[i],j)
         
-    # Calculate percentages from all path runs
+    # Calculate independent variable success percentages
+    IV_percent[i,:] = analysisPercent(IV_success[i,:],IV_index[i],IV_percent[i,:],runs)
+        
+    # Calculate percentages from all runs of a path
     Var_percent[i,:], Run_percent[i,:] = resultPercent(Var_success[i,:], Run_success[i,:])
 
 # Calculate means and standard deviations of successful runs
@@ -710,4 +773,38 @@ ax.set_ylabel("Average Number of Restart Loops")
 plt.grid(which='major',axis='y')
 plt.show()
 
+# Graph variable histograms of sample number of sucessful runs
+for i in range(0,np.shape(Path_vals)[2]):           # Loop with variables
+
+    # Set up variable histogram figure
+    fig, ax = plt.subplots(figsize=(10,6))
+    ax.set_xlabel("Value")
+    ax.set_ylabel("Frequency")
+    plt.grid(which='major',axis='both')
+
+    for j in range(0,np.shape(Path_vals)[0]):       # Loop with paths
+    
+        # Set figure details
+        ax.set_title(x[i])
+        Bins = np.linspace(bounds[i,0],bounds[i,1],num=21)
+        sc1 = 0
+        for k in range(sample,np.shape(bounds)[0]+1): # Loop with sample numbers
+            sc1 += len(Run_index[j][k])
+        yhist = np.zeros(sc1)
+        sc2 = 0
+        for k in range(sample,np.shape(bounds)[0]+1): # Loop with sample numbers
+            for m in range(0,len(Run_index[j][k])):          # Loop with successful runs
+                yhist[sc2] = Path_vals[j,Run_index[j][k][m],i]
+                sc2 += 1
+        plt.hist(yhist,bins=Bins,histtype='stepfilled')
+        plt.legend(["Path1", "Path2", "Path3", "Path4"], loc='upper right')
+    
+    # Show histogram for each variable
+    plt.show()
+                
+        
+        
+        
+        
+        
 
