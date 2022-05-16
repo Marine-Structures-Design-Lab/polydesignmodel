@@ -655,7 +655,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
                         # Calculate successful runs up to analysis in sequence that produce an acceptable output
                         if count_seq == 0:
                             IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
-                        elif IV_index[i][count_seq-1]:
+                        elif j in IV_index[i][count_seq-1]:
                             IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
                         
                         # Increase the sequence counter by 1
@@ -670,7 +670,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
                     # Calculate successful runs up to analysis in sequence that produce an acceptable output
                     if count_seq == 0:
                         IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
-                    elif IV_index[i][count_seq-1]:
+                    elif j in IV_index[i][count_seq-1]:
                         IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
                         
                     # Increase the sequence counter by 1
@@ -685,7 +685,7 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
                 # Calculate successful runs up to analysis in sequence that produce an acceptable output
                 if count_seq == 0:
                     IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
-                elif IV_index[i][count_seq-1]:
+                elif j in IV_index[i][count_seq-1]:
                     IV_success, IV_index = analysisChecker(Path_vals[i,j,:], Vars, bounds, IV_success, IV_index, i, j, count_seq, x)
                 
                 # Increase the sequence counter by 1
