@@ -445,6 +445,12 @@ def solChecker(Path,bounds,Var,Run,Run_ind,j):
     
     # Gather success results for the run
     for i in range(0,np.shape(Path)[0]):
+        
+        # Temporary supplement for NaN problem with Path 3
+        if (Path[3] == 0):
+            break
+        
+        # Main check
         if (Path[i] >= bounds[i,0]) and (Path[i] < bounds[i,1]):
             Var[i] += 1
             count += 1
@@ -470,7 +476,7 @@ def resultPercent(Var,Run):
 USER INPUTS
 """
 # Assign maximum number of runs for each path
-runs = 10000
+runs = 100000
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
