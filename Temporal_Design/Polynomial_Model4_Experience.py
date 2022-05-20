@@ -630,7 +630,6 @@ for i in range(0,np.shape(Path_vals)[0]):        # i loops with paths
                         Path_vals_new = np.zeros(np.shape(Path_vals)[2])
                         
                         # Remove run from independent variable index and reduce IV count by 1
-                        print(Rework_lrestart[i,j])
                         for k in range(0,len(IV_index[i])):
                             if (j in IV_index[i][k]) and (Rework_lrestart[i,j] <= lrestart_max):
                                 IV_index[i][k].remove(j)
