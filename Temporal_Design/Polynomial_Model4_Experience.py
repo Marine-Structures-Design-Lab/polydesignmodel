@@ -83,7 +83,7 @@ class getInput:
                     self.Pvn[ind] = np.random.normal(mean[ind],std[ind])
                 else:
                     std_dev = stdr*(np.abs(bounds[ind,1]-bounds[ind,0]))/(0.5**(h-1))
-                    self.Pvn[ind] = np.random.normal(mean[ind],std_dev)
+                    self.Pvn[ind] = np.random.normal(mv[ind],std_dev)
         
         # Return vector with normal RVs
         return self.Pvn
