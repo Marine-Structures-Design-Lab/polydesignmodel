@@ -239,8 +239,9 @@ SCRIPT
 Set_bounds = np.zeros((1,np.shape(bounds)[0],np.shape(bounds)[1]))
 Set_bounds[0,:,:] = np.copy(bounds)
 
-# Create array for Monte Carlo run values
+# Create arrays for Monte Carlo run values
 Path_vals = np.zeros((runs,len(x)))
+Path_vals_s = np.zeros((1,len(x)))
 
 # Set iteration counter
 count = 0
@@ -274,21 +275,25 @@ for i in range(0,np.shape(sequence)[1]):
         solution = assignOutput(sols,Path_vals[j,:],x)
         Path_vals[j,:] = solution.solAssign()
         
-        # Check if all variables fall within bounds and collect run index
+        # Check if all variables fall within bounds
         check = solChecker(Path_vals[j,:],bounds,Vars,j,x)
-        print(check)
         
-        
+        # Collect successful analysis indices
+        if check and np.sum(Path_vals_s)==0:
+            Path_vals_s[0,:] = np.copy(Path_vals[j,:])
+        elif check:
+            Path_vals_s = np.append(Path_vals_s,[Path_vals[j,:]],axis=0)
+    
     # Find min/max variable values of collected indices
+    
     
     # [Produce histogram of viable design space for each variable - This could be used as experience later if desired instead of just cutting off zero utility values]
     
     # Change variable set bounds based on collected indices
     
     # Reset Path values to zeros
-    print(Path_vals)
     Path_vals = np.zeros((runs,len(x)))
-    print(Path_vals)
+    Path_vals_s = np.zeros((1,len(x)))
         
     # Increase iteration counter by 1
     count = count + 1
