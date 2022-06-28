@@ -190,7 +190,7 @@ def solChecker(Path,bounds,Vars,j,x):
 USER INPUTS
 """
 # Assign maximum number of runs for each path
-runs = 10
+runs = 1000
 
 # Create symbols for all of the variables
 x = sp.symbols('x1 x2 x3 x4 x5 x6 x7 x8 x9 x10')
@@ -242,83 +242,102 @@ Set_bounds[0,:,:] = np.copy(bounds)
 # Create arrays for Monte Carlo run values
 Path_vals = np.zeros((runs,len(x)))
 Path_vals_s = np.zeros((1,len(x)))
+var_mins = np.zeros(len(x))
+var_maxs = np.zeros(len(x))
 
 # Set iteration counter
 count = 0
 
-# Loop through each analysis of path one once
-for i in range(0,np.shape(sequence)[1]):
+# Loop through each path
+for q in range(0,np.shape(sequence)[0]):
 
-    # Append bounds from previous iteration
-    Set_bounds = np.append(Set_bounds,np.copy(Set_bounds[count,:,:].reshape((1,np.shape(bounds)[0],np.shape(bounds)[1]))),axis=0)
+    # Loop through path sequence a set number of times
+    for k in range(0,5):
     
-    # Retrieve variables involved in analysis
-    index = sequence[0][i]
-    variables = getVariables(analysis[index-1])
-    Vars = variables.getVars()
+        # Loop through each analysis of path
+        for i in range(0,np.shape(sequence)[1]):
+        
+            # Append bounds from previous iteration
+            Set_bounds = np.append(Set_bounds,np.copy(Set_bounds[count,:,:].reshape((1,np.shape(bounds)[0],np.shape(bounds)[1]))),axis=0)
+            
+            # Retrieve variables involved in analysis
+            index = sequence[q][i]
+            variables = getVariables(analysis[index-1])
+            Vars = variables.getVars()
+            
+            # Loop through each Monte Carlo run
+            for j in range(0,np.shape(Path_vals)[0]):
+                
+                # Get random values for inputs of analysis
+                random = getInput(Vars,Path_vals[j,:],depend[index-1][:],x)
+                Path_vals[j,:] = random.getUniform(Set_bounds[count,:,:])
+                
+                # Create function(s) for analysis with numerical inputs and variable output(s)
+                func = createFunction(analysis[index-1],Path_vals[j,:],Vars,depend[index-1][:],x)
+                expr = func.getFunc()
+                
+                # Evaluate analysis
+                sols = sp.solve(expr)
+                
+                # Assign dependent variables(s) of analysis to new path values vector
+                solution = assignOutput(sols,Path_vals[j,:],x)
+                Path_vals[j,:] = solution.solAssign()
+                
+                # Check if all variables fall within bounds
+                check = solChecker(Path_vals[j,:],bounds,Vars,j,x)
+                
+                # Collect successful analysis indices
+                if check and np.sum(Path_vals_s)==0:
+                    Path_vals_s[0,:] = np.copy(Path_vals[j,:])
+                elif check:
+                    Path_vals_s = np.append(Path_vals_s,[Path_vals[j,:]],axis=0)
+            
+            # Find min/max variable values of collected indices
+            var_mins = np.amin(Path_vals_s,axis=0)
+            var_maxs = np.amax(Path_vals_s,axis=0)
+            
+            # [Produce histogram of viable design space for each variable - This could be used as experience later if desired instead of just cutting off zero utility values]
+            
+            # Change variable set bounds based on collected indices
+            for j in range(0,np.shape(var_mins)[0]):
+                if (var_mins[j]!=0 or var_maxs[j]!=0):
+                    if var_mins[j] > Set_bounds[count,j,0]:
+                        Set_bounds[count+1,j,0] = var_mins[j]
+                    if var_maxs[j] < Set_bounds[count,j,1]:
+                        Set_bounds[count+1,j,1] = var_maxs[j]
+            
+            # Reset Path values and minimum/maximums to zeros
+            Path_vals = np.zeros((runs,len(x)))
+            Path_vals_s = np.zeros((1,len(x)))
+            var_mins = np.zeros(len(x))
+            var_maxs = np.zeros(len(x))
+                
+            # Increase iteration counter by 1
+            count = count + 1
     
-    # Loop through each Monte Carlo run
-    for j in range(0,np.shape(Path_vals)[0]):
-        
-        # Get random values for inputs of analysis
-        random = getInput(Vars,Path_vals[j,:],depend[index-1][:],x)
-        Path_vals[j,:] = random.getUniform(Set_bounds[count,:,:])
-        
-        # Create function(s) for analysis with numerical inputs and variable output(s)
-        func = createFunction(analysis[index-1],Path_vals[j,:],Vars,depend[index-1][:],x)
-        expr = func.getFunc()
-        
-        # Evaluate analysis
-        sols = sp.solve(expr)
-        
-        # Assign dependent variables(s) of analysis to new path values vector
-        solution = assignOutput(sols,Path_vals[j,:],x)
-        Path_vals[j,:] = solution.solAssign()
-        
-        # Check if all variables fall within bounds
-        check = solChecker(Path_vals[j,:],bounds,Vars,j,x)
-        
-        # Collect successful analysis indices
-        if check and np.sum(Path_vals_s)==0:
-            Path_vals_s[0,:] = np.copy(Path_vals[j,:])
-        elif check:
-            Path_vals_s = np.append(Path_vals_s,[Path_vals[j,:]],axis=0)
+    # Plot upper and lower bounds for inputs of each analysis iteration of the path
+    fig = plt.figure(figsize=(10, 10))
+    xi = np.arange(np.shape(Set_bounds)[0])
+    color = iter(plt.cm.rainbow(np.linspace(0, 1, np.shape(bounds)[0])))
+    for i in range(0,np.shape(Set_bounds)[1]):
+        c = next(color)
+        for j in range(0,np.shape(Set_bounds)[2]):
+            if j == 0:
+                plt.plot(xi,Set_bounds[:,i,j],'-o',c=c,label=x[i])
+            else:
+                plt.plot(xi,Set_bounds[:,i,j],'-o',c=c)
+    plt.title('Path '+str(q+1))
+    plt.xlabel('Analysis Iteration')
+    plt.ylabel('Bound')
+    plt.legend(loc='upper left')
+    plt.grid(which='major',axis='both')
+    plt.show()
     
-    # Find min/max variable values of collected indices
-    
-    
-    # [Produce histogram of viable design space for each variable - This could be used as experience later if desired instead of just cutting off zero utility values]
-    
-    # Change variable set bounds based on collected indices
-    
-    # Reset Path values to zeros
-    Path_vals = np.zeros((runs,len(x)))
-    Path_vals_s = np.zeros((1,len(x)))
-        
-    # Increase iteration counter by 1
-    count = count + 1
+    # Reset set bounds and iteration counter
+    Set_bounds = np.zeros((1,np.shape(bounds)[0],np.shape(bounds)[1]))
+    Set_bounds[0,:,:] = np.copy(bounds)
+    count = 0
 
-# Plot upper and lower bounds for each analysis iteration of the path
-fig = plt.figure(figsize=(10, 6))
-xi = np.arange(np.shape(Set_bounds)[0])
-color = iter(plt.cm.rainbow(np.linspace(0, 1, np.shape(bounds)[0])))
-for i in range(0,np.shape(Set_bounds)[1]):
-    c = next(color)
-    for j in range(0,np.shape(Set_bounds)[2]):
-        if j == 0:
-            plt.plot(xi,Set_bounds[:,i,j],'-o',c=c,label=x[i])
-        else:
-            plt.plot(xi,Set_bounds[:,i,j],'-o',c=c)
-plt.title('Path 1')
-plt.xlabel('Analysis Iteration')
-plt.ylabel('Bound')
-plt.legend(loc='best')
-plt.grid(which='major',axis='both')
-plt.show()
-
-
-# Create RVs for analysis inputs based on Set_bounds
-# Calculate analysis output(s)
 
 
 
