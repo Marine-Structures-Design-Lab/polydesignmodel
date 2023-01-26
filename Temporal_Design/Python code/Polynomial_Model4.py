@@ -4,6 +4,35 @@ Created on Fri May 14 20:28:00 2022
 
 @author: Joseph B. Van Houten (joeyvan@umich.edu)
 
+The goal of this code is to solve a sequential system of analyses for a
+user-selected path.  The user is able to select the number of analyses, the
+variables in the analyses, the equations in the analyses, the bounds on the
+variables, among other things.  One caveat is that each analysis is only able
+to be solved in one direction: inputs to outputs.  So iterations will be
+required for situations where the inputs of one analysis are determined first,
+when all or some of those inputs are also the outputs of an anlysis solved
+later.  The user is able to select the type of minimizer, although BFGS or
+CG methods are recommended.
+
+In this inexperienced version of the code, all inputs are originally assigned a
+uniform random value within the variable's accepted bounds.  If rework loops
+within the scope of a single analysis are not able to mitigate any variable
+conflicts with "Analysis Loops", then "Restart Loops" are initiated to start
+the sequence over for that particular run.  Random variable assignments for
+these restart loops involve a combination of uniform and normal random value
+assignments.
+
+The results focus on gathering the percentage of runs that each variable falls
+within its required bounds, the percentage of runs having an allotted number of
+successful variables, the total number of analysis and restart loops, and
+histograms of variable values for the completely successful runs.  The code
+also collects the indices of the completely successful runs of each path at
+each step of the sequence so the user can track the successful designs that
+remain after each analysis and determine how burdened designers later in the
+sequence are becoming because of path order and previous variable assignements.
+
+User requirements: Should only need to make changes to the 'USER INPUTS' 
+section and the graph-related code at the end of the 'SCRIPT' section.
 """
 
 
